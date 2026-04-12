@@ -140,5 +140,6 @@ def test_dashboard_renders(monkeypatch):
     _patch_dashboard(monkeypatch)
     response = client.get("/")
     assert response.status_code == 200
-    assert "Hermes Control Plane" in response.text
+    assert "Hermes" in response.text
+    assert "Overview" in response.text
     assert "radar" in response.text

@@ -3,328 +3,723 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hermes Control Plane</title>
+  <title>{{ page_title }} — Hermes CP</title>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+    /* ── Tokens ── */
     :root {
-      --bg-deep: #060a11;
-      --bg: #0b1120;
-      --bg-surface: #111a2e;
-      --bg-surface-hover: #162040;
-      --border: #1c2d4a;
-      --border-light: #243656;
-      --text: #c8d6e5;
-      --text-dim: #5a7091;
-      --text-bright: #e8f0fc;
-      --cyan: #22d3ee;
-      --cyan-dim: rgba(34, 211, 238, 0.15);
-      --cyan-glow: rgba(34, 211, 238, 0.3);
-      --green: #34d399;
-      --green-dim: rgba(52, 211, 153, 0.12);
-      --red: #f87171;
-      --red-dim: rgba(248, 113, 113, 0.12);
-      --amber: #fbbf24;
-      --amber-dim: rgba(251, 191, 36, 0.12);
-      --purple: #a78bfa;
-      --blue: #60a5fa;
-      --pink: #f472b6;
-      --font-mono: 'DM Mono', 'Menlo', monospace;
-      --font-sans: 'Outfit', system-ui, sans-serif;
-      --radius: 8px;
-      --radius-lg: 12px;
+      --bg:          #0c0d10;
+      --surface:     #131419;
+      --surface-2:   #191b22;
+      --surface-3:   #1e2029;
+      --border:      #1e2028;
+      --border-2:    #262833;
+      --text:        #dde1ec;
+      --text-2:      #9299b0;
+      --text-3:      #464c62;
+      --accent:      #7fa8f5;
+      --accent-dim:  rgba(127,168,245,0.1);
+      --green:       #34d399;
+      --green-dim:   rgba(52,211,153,0.1);
+      --red:         #f87171;
+      --red-dim:     rgba(248,113,113,0.1);
+      --amber:       #fbbf24;
+      --amber-dim:   rgba(251,191,36,0.1);
+      --blue:        #60a5fa;
+      --purple:      #a78bfa;
+      --cyan:        #22d3ee;
+      --font-sans:   'IBM Plex Sans', system-ui, sans-serif;
+      --font-mono:   'IBM Plex Mono', 'Menlo', monospace;
+      --sw:          220px;
+      --swc:         52px;
+      --r:           6px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
     body {
       font-family: var(--font-sans);
-      background: var(--bg-deep);
+      background: var(--bg);
       color: var(--text);
-      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+      height: 100%;
+      display: flex;
     }
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(34,211,238,0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(34,211,238,0.02) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none; z-index: 0;
-    }
-    .shell { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 2rem 2rem 3rem; }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+    select, input { font-family: inherit; }
 
-    /* Header */
-    .header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 1.5rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border);
+    /* ── Sidebar ── */
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      width: var(--sw);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 50;
+      overflow: hidden;
+      transition: width 0.2s cubic-bezier(0.4,0,0.2,1);
+      flex-shrink: 0;
     }
-    .header-left { display: flex; align-items: center; gap: 1rem; }
-    .logo {
-      width: 36px; height: 36px; border-radius: 8px;
-      background: linear-gradient(135deg, var(--cyan), var(--purple));
+    body.sb-collapsed .sidebar { width: var(--swc); }
+
+    .sb-brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 12px 14px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      min-height: 54px;
+    }
+    .sb-brand-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .sb-icon {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      background: var(--accent);
+      color: #0c0d10;
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-sans); font-size: 1.1rem; font-weight: 700; color: var(--bg-deep);
-      box-shadow: 0 0 20px var(--cyan-glow);
+      font-weight: 700; font-size: 12px;
+      flex-shrink: 0;
+      letter-spacing: -0.02em;
     }
-    h1 { font-size: 1.3rem; font-weight: 600; color: var(--text-bright); letter-spacing: -0.02em; }
-    .header-right { display: flex; align-items: center; gap: 1rem; }
-    .header-tag {
-      font-family: var(--font-mono); font-size: 0.7rem; color: var(--cyan);
-      background: var(--cyan-dim); padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em;
+    .sb-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    body.sb-collapsed .sb-name { opacity: 0; pointer-events: none; }
+
+    .sb-toggle {
+      width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; border-radius: 4px;
+      color: var(--text-3);
+      transition: color 0.12s, background 0.12s;
+      flex-shrink: 0;
+    }
+    .sb-toggle:hover { color: var(--text-2); background: var(--surface-2); }
+    .sb-toggle svg { transition: transform 0.2s; }
+    body.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
+
+    .sb-nav {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 6px 0;
+    }
+    .sb-nav::-webkit-scrollbar { width: 3px; }
+    .sb-nav::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+    .sb-group { padding: 2px 0; }
+    .sb-group-label {
+      padding: 8px 16px 2px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      white-space: nowrap;
+      overflow: hidden;
+      transition: opacity 0.15s, height 0.15s, padding 0.15s;
+      height: auto;
+    }
+    body.sb-collapsed .sb-group-label {
+      opacity: 0;
+      height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .sb-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 16px;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 400;
+      transition: background 0.1s, color 0.1s;
+      white-space: nowrap;
+      position: relative;
+    }
+    .sb-item:hover { background: var(--surface-2); color: var(--text); }
+    .sb-item.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .sb-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 5px; bottom: 5px;
+      width: 2px;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+    .sb-item-icon {
+      width: 14px; height: 14px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.7;
+    }
+    .sb-item.active .sb-item-icon { opacity: 1; }
+    .sb-item-label {
+      transition: opacity 0.15s;
+      overflow: hidden;
+    }
+    body.sb-collapsed .sb-item-label { opacity: 0; }
+
+    .sb-profile-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-3);
+      flex-shrink: 0;
+      margin: 0 4px;
+    }
+    .sb-profile-dot.is-active { background: var(--green); }
+    .sb-item.active .sb-profile-dot { background: var(--accent); }
+
+    .sb-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sb-footer-text {
+      font-size: 10px;
+      color: var(--text-3);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+    body.sb-collapsed .sb-footer-text { opacity: 0; }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      min-width: 0;
+      margin-left: var(--sw);
+      transition: margin-left 0.2s cubic-bezier(0.4,0,0.2,1);
+      overflow-y: auto;
+    }
+    body.sb-collapsed .main { margin-left: var(--swc); }
+
+    .content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 32px 56px;
+    }
+
+    /* ── Page header ── */
+    .page-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .breadcrumb {
+      display: flex; align-items: center; gap: 5px;
+      margin-bottom: 6px;
+    }
+    .bc-link { font-size: 12px; color: var(--text-2); transition: color 0.12s; }
+    .bc-link:hover { color: var(--text); }
+    .bc-sep { font-size: 12px; color: var(--text-3); }
+    .bc-current { font-size: 12px; color: var(--text); }
+    .page-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+    .page-sub {
+      font-size: 12px;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      margin-top: 4px;
+    }
+    .live-badge {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; color: var(--text-3);
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      border: 1px solid var(--border-2); border-radius: 20px;
+      margin-top: 4px;
     }
     .live-dot {
-      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--green); margin-right: 6px;
-      animation: pulse-dot 2s ease-in-out infinite; box-shadow: 0 0 6px var(--green);
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 2.5s ease-in-out infinite;
     }
-    @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
 
-    /* Range selector */
+    /* ── Range bar ── */
     .range-bar {
-      display: flex; align-items: center; gap: 0.5rem;
-      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
     }
+    .range-presets { display: flex; gap: 3px; }
     .range-btn {
-      font-family: var(--font-mono); font-size: 0.72rem; font-weight: 400;
-      padding: 5px 14px; border-radius: 6px;
-      border: 1px solid var(--border); background: transparent; color: var(--text-dim);
-      cursor: pointer; transition: all 0.15s;
+      font-family: var(--font-mono); font-size: 11px;
+      padding: 5px 12px; border-radius: var(--r);
+      border: 1px solid var(--border-2);
+      background: transparent; color: var(--text-2);
+      cursor: pointer; transition: all 0.1s;
     }
-    .range-btn:hover { border-color: var(--border-light); color: var(--text); }
-    .range-btn.active { background: var(--cyan-dim); border-color: var(--cyan); color: var(--cyan); }
-    .range-sep { color: var(--border); font-size: 0.8rem; }
-    .range-custom {
-      font-family: var(--font-mono); font-size: 0.72rem;
-      padding: 4px 10px; border-radius: 6px;
-      border: 1px solid var(--border); background: var(--bg-surface); color: var(--text);
-      color-scheme: dark;
+    .range-btn:hover { border-color: var(--text-3); color: var(--text); }
+    .range-btn.active {
+      background: var(--accent-dim);
+      border-color: rgba(127,168,245,0.3);
+      color: var(--accent);
     }
+    .range-custom-group { display: flex; align-items: center; gap: 7px; }
+    .range-custom-group label { font-size: 10px; color: var(--text-3); font-family: var(--font-mono); }
+    .date-input {
+      font-family: var(--font-mono); font-size: 11px;
+      padding: 4px 8px; border-radius: var(--r);
+      border: 1px solid var(--border-2); background: var(--surface);
+      color: var(--text); color-scheme: dark;
+    }
+    .date-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
-    /* KPI */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    /* ── KPI row ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
     .kpi-card {
-      background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-      padding: 1.25rem 1.5rem; transition: border-color 0.2s, transform 0.15s;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 18px 20px;
+      transition: border-color 0.12s;
     }
-    .kpi-card:hover { border-color: var(--border-light); transform: translateY(-1px); }
-    .kpi-value { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 500; color: var(--text-bright); line-height: 1.1; margin-bottom: 0.3rem; }
+    .kpi-card:hover { border-color: var(--border-2); }
+    .kpi-value {
+      font-family: var(--font-mono); font-size: 26px; font-weight: 400;
+      color: var(--text); letter-spacing: -0.04em; line-height: 1;
+      margin-bottom: 7px;
+    }
     .kpi-cost .kpi-value { color: var(--amber); }
-    .kpi-label { font-size: 0.8rem; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
-    .kpi-sub { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-dim); margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    .kpi-label {
+      font-size: 10px; font-weight: 600; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px;
+    }
+    .kpi-sub {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+      padding-top: 9px; border-top: 1px solid var(--border);
+    }
 
-    /* Charts */
-    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-    .chart-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; }
-    .chart-title { font-size: 0.8rem; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
-    .chart-wrap { position: relative; height: 200px; }
+    /* ── Charts ── */
+    .charts-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 20px;
+    }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 18px 20px;
+    }
+    .chart-title {
+      font-size: 10px; font-weight: 600; color: var(--text-2);
+      text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px;
+    }
+    .chart-wrap { position: relative; height: 180px; }
 
     /* Heatmap */
-    .heatmap-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; }
-    .heatmap-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; margin-top: 0.75rem; }
-    .heatmap-cell { aspect-ratio: 1; border-radius: 3px; position: relative; transition: transform 0.15s; cursor: default; }
-    .heatmap-cell:hover { transform: scale(1.3); z-index: 2; }
+    .heatmap-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 18px 20px; margin-bottom: 20px;
+    }
+    .heatmap-grid {
+      display: grid; grid-template-columns: repeat(24, 1fr);
+      gap: 3px; margin-top: 10px;
+    }
+    .heatmap-cell {
+      aspect-ratio: 1; border-radius: 3px;
+      position: relative; cursor: default;
+      transition: transform 0.1s;
+    }
+    .heatmap-cell:hover { transform: scale(1.5); z-index: 2; }
     .heatmap-cell .tooltip {
-      display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-      background: var(--bg); border: 1px solid var(--border-light); border-radius: 6px;
-      padding: 4px 8px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-bright);
+      display: none; position: absolute;
+      bottom: calc(100% + 5px); left: 50%; transform: translateX(-50%);
+      background: var(--surface-3); border: 1px solid var(--border-2);
+      border-radius: 4px; padding: 3px 7px;
+      font-family: var(--font-mono); font-size: 10px; color: var(--text);
       white-space: nowrap; z-index: 10; pointer-events: none;
     }
     .heatmap-cell:hover .tooltip { display: block; }
-    .heatmap-labels { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; margin-top: 4px; }
-    .heatmap-labels span { font-family: var(--font-mono); font-size: 0.55rem; color: var(--text-dim); text-align: center; }
+    .heatmap-labels {
+      display: grid; grid-template-columns: repeat(24, 1fr);
+      gap: 3px; margin-top: 3px;
+    }
+    .heatmap-labels span {
+      font-family: var(--font-mono); font-size: 9px;
+      color: var(--text-3); text-align: center;
+    }
 
-    /* Section */
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-    .section-title { font-size: 0.8rem; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
-    .section-count { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); background: var(--bg); padding: 2px 8px; border-radius: 10px; }
+    /* ── Profile status card ── */
+    .profile-status-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .psc-name { font-weight: 600; font-size: 14px; color: var(--text); margin-bottom: 2px; }
+    .psc-sub { font-family: var(--font-mono); font-size: 11px; color: var(--text-2); }
 
-    /* Tables */
-    .table-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.5rem; }
-    .table-card .section-header { padding: 1rem 1.5rem 0; }
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden; margin-bottom: 20px;
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 11px; font-weight: 600; color: var(--text);
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .card-count {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+      background: var(--surface-2); padding: 1px 8px;
+      border-radius: 10px; border: 1px solid var(--border);
+    }
+
+    /* Section header (used in cron partial) */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+    }
+    .section-title {
+      font-size: 11px; font-weight: 600; color: var(--text);
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .section-count {
+      font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
+      background: var(--surface-2); padding: 1px 8px;
+      border-radius: 10px; border: 1px solid var(--border);
+    }
+
+    /* ── Tables ── */
     table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
-    th { background: rgba(0,0,0,0.2); color: var(--text-dim); font-weight: 500; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; }
-    tr { transition: background 0.15s; }
-    tr:hover { background: var(--bg-surface-hover); }
+    th, td {
+      text-align: left; padding: 9px 20px;
+      border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    th {
+      background: var(--surface-2); color: var(--text-2);
+      font-weight: 500; font-size: 10px;
+      text-transform: uppercase; letter-spacing: 0.07em;
+    }
     tr:last-child td { border-bottom: none; }
-    .mono { font-family: var(--font-mono); font-size: 0.78rem; }
-    .dim { color: var(--text-dim); }
-    .cost { color: var(--amber); font-family: var(--font-mono); font-size: 0.78rem; }
-    .cost-included { color: var(--text-dim); font-family: var(--font-mono); font-size: 0.72rem; font-style: italic; }
-    .model-name { color: var(--cyan); font-size: 0.75rem; }
-    .session-title { color: var(--text-bright); font-size: 0.78rem; cursor: help; }
+    tr:hover td { background: rgba(127,168,245,0.025); }
 
-    /* Badges */
-    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 500; }
+    .mono { font-family: var(--font-mono); font-size: 12px; }
+    .dim { color: var(--text-2); }
+    .cost { color: var(--amber); font-family: var(--font-mono); font-size: 12px; }
+    .cost-included { color: var(--text-3); font-family: var(--font-mono); font-size: 11px; font-style: italic; }
+    .model-name { color: var(--accent); font-size: 12px; font-family: var(--font-mono); }
+    .session-title { color: var(--text); font-size: 13px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 500;
+    }
     .badge-active { background: var(--green-dim); color: var(--green); }
     .badge-inactive { background: var(--red-dim); color: var(--red); }
     .badge-unknown { background: var(--amber-dim); color: var(--amber); }
-    .pulse { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse-dot 2s ease-in-out infinite; }
-    .source-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.68rem; }
+    .pulse {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: currentColor; animation: pulse-dot 2s ease-in-out infinite;
+    }
+    .source-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-family: var(--font-mono); font-size: 11px;
+    }
     .source-telegram { background: rgba(34,211,238,0.1); color: var(--cyan); }
     .source-cli { background: rgba(167,139,250,0.1); color: var(--purple); }
     .source-webhook { background: rgba(96,165,250,0.1); color: var(--blue); }
     .source-cron { background: rgba(251,191,36,0.1); color: var(--amber); }
 
-    /* Session filters */
+    /* ── Session controls ── */
     .session-controls {
-      display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem;
-      border-bottom: 1px solid var(--border); flex-wrap: wrap;
+      display: flex; align-items: center; gap: 14px;
+      padding: 9px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
-    .filter-select {
-      font-family: var(--font-mono); font-size: 0.72rem;
-      padding: 4px 10px; border-radius: 6px;
-      border: 1px solid var(--border); background: var(--bg); color: var(--text);
-      cursor: pointer; color-scheme: dark;
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .filter-group label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+    .filter-group select {
+      font-family: var(--font-mono); font-size: 11px;
+      padding: 3px 8px; border-radius: var(--r);
+      border: 1px solid var(--border-2); background: var(--bg);
+      color: var(--text); cursor: pointer; color-scheme: dark;
     }
-    .filter-select:focus { outline: 1px solid var(--cyan); border-color: var(--cyan); }
-    .filter-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .filter-group select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
-    /* Pagination */
+    /* ── Pagination ── */
     .pagination {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0.75rem 1.5rem; border-top: 1px solid var(--border);
+      padding: 9px 20px; border-top: 1px solid var(--border);
     }
-    .pagination-info { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); }
-    .pagination-btns { display: flex; gap: 0.5rem; }
-    .page-btn {
-      font-family: var(--font-mono); font-size: 0.7rem; padding: 4px 12px;
-      border-radius: 6px; border: 1px solid var(--border); background: transparent;
-      color: var(--text-dim); cursor: pointer; transition: all 0.15s;
+    .pag-info { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+    .pag-btns { display: flex; gap: 5px; }
+    .btn-page {
+      font-family: var(--font-mono); font-size: 11px;
+      padding: 4px 12px; border-radius: var(--r);
+      border: 1px solid var(--border-2); background: transparent;
+      color: var(--text-2); cursor: pointer; transition: all 0.1s;
     }
-    .page-btn:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
-    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-page:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* Profile links */
-    .profile-link { color: var(--cyan); text-decoration: none; transition: color 0.15s; }
-    .profile-link:hover { color: var(--text-bright); text-decoration: underline; }
+    /* ── Profile link ── */
+    .profile-link { color: var(--accent); transition: color 0.1s; }
+    .profile-link:hover { color: var(--text); }
 
-    /* Breadcrumb */
-    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem; }
-    .breadcrumb a { color: var(--text-dim); text-decoration: none; font-size: 0.8rem; transition: color 0.15s; }
-    .breadcrumb a:hover { color: var(--cyan); }
-    .breadcrumb .sep { color: var(--border-light); font-size: 0.75rem; }
-    .breadcrumb .current { color: var(--text-bright); font-size: 0.8rem; font-weight: 500; }
-
-    /* Profile header card */
-    .profile-header-card {
-      background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
-      padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
-      display: flex; align-items: center; justify-content: space-between;
+    /* table-card (cron partial compatibility) */
+    .table-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden; margin-bottom: 20px;
     }
-    .profile-header-card .profile-info h2 { font-size: 1.1rem; font-weight: 600; color: var(--text-bright); margin-bottom: 0.25rem; }
-    .profile-header-card .profile-info .subtitle { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); }
+    .table-card .section-header { border-top: none; }
 
-    /* Cron */
-    .cron-name { font-weight: 500; color: var(--text-bright); font-size: 0.82rem; }
-    .cron-id { font-size: 0.65rem; margin-top: 2px; }
-    .output-row:hover { background: transparent !important; }
+    /* ── Cron ── */
+    .cron-name { font-weight: 500; color: var(--text); font-size: 13px; }
+    .cron-id { font-size: 10px; color: var(--text-3); font-family: var(--font-mono); margin-top: 2px; }
+    .output-row:hover td { background: transparent !important; }
     .output-list { background: var(--bg); border-top: 1px solid var(--border); }
     .output-item {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0.5rem 1.5rem; border-bottom: 1px solid var(--border);
-      font-size: 0.75rem; transition: background 0.15s; cursor: pointer;
+      padding: 7px 20px; border-bottom: 1px solid var(--border);
+      font-size: 12px; cursor: pointer; transition: background 0.1s;
     }
-    .output-item:hover { background: var(--bg-surface-hover); }
+    .output-item:hover { background: var(--surface-2); }
     .output-item:last-child { border-bottom: none; }
-    .output-item .ts { font-family: var(--font-mono); color: var(--text-dim); font-size: 0.7rem; }
-    .output-item .sz { font-family: var(--font-mono); color: var(--text-dim); font-size: 0.65rem; }
-    .output-modal-overlay {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
-      z-index: 100; align-items: center; justify-content: center;
+    .output-item .ts { font-family: var(--font-mono); color: var(--text-2); font-size: 11px; }
+    .output-item .sz { font-family: var(--font-mono); color: var(--text-3); font-size: 10px; }
+    .page-btn {
+      font-family: var(--font-mono); font-size: 11px;
+      padding: 3px 10px; border-radius: var(--r);
+      border: 1px solid var(--border-2); background: transparent;
+      color: var(--text-2); cursor: pointer; transition: all 0.1s;
     }
-    .output-modal-overlay.open { display: flex; }
-    .output-modal {
-      background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius-lg);
-      width: 90vw; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column;
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200; align-items: center; justify-content: center;
     }
-    .output-modal-header {
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border-2);
+      border-radius: var(--r);
+      width: min(90vw, 860px); max-height: 85vh;
+      display: flex; flex-direction: column;
+    }
+    .modal-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+      padding: 12px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
     }
-    .output-modal-header h3 { font-size: 0.9rem; color: var(--text-bright); font-weight: 500; }
-    .output-modal-close {
-      background: none; border: none; color: var(--text-dim); font-size: 1.2rem;
-      cursor: pointer; padding: 4px 8px; border-radius: 4px;
+    .modal-header h3 { font-size: 13px; color: var(--text); font-weight: 500; }
+    .modal-close {
+      background: none; border: none; color: var(--text-3);
+      font-size: 15px; cursor: pointer; padding: 2px 6px;
+      border-radius: 4px; line-height: 1; transition: color 0.1s;
     }
-    .output-modal-close:hover { color: var(--text-bright); background: var(--bg-surface-hover); }
-    .output-modal-body {
-      padding: 1.5rem; overflow-y: auto; flex: 1;
-      font-family: var(--font-sans); font-size: 0.82rem; line-height: 1.7;
-      color: var(--text);
+    .modal-close:hover { color: var(--text); }
+    .modal-body {
+      padding: 20px; overflow-y: auto; flex: 1;
+      font-family: var(--font-sans); font-size: 14px; line-height: 1.7; color: var(--text);
     }
-    .output-modal-body h1, .output-modal-body h2, .output-modal-body h3 {
-      color: var(--text-bright); margin: 1.2em 0 0.5em; font-family: var(--font-sans);
+    .modal-body h1, .modal-body h2, .modal-body h3 { color: var(--text); margin: 1.1em 0 0.4em; }
+    .modal-body h1 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
+    .modal-body h2 { font-size: 15px; color: var(--accent); }
+    .modal-body h3 { font-size: 13px; }
+    .modal-body p { margin: 0.4em 0; }
+    .modal-body ul, .modal-body ol { margin: 0.4em 0; padding-left: 1.4em; }
+    .modal-body li { margin: 0.2em 0; }
+    .modal-body code {
+      font-family: var(--font-mono); font-size: 12px;
+      background: var(--bg); padding: 1px 5px; border-radius: 3px; color: var(--accent);
     }
-    .output-modal-body h1 { font-size: 1.2rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
-    .output-modal-body h2 { font-size: 1rem; color: var(--cyan); }
-    .output-modal-body h3 { font-size: 0.9rem; }
-    .output-modal-body p { margin: 0.5em 0; }
-    .output-modal-body ul, .output-modal-body ol { margin: 0.5em 0; padding-left: 1.5em; }
-    .output-modal-body li { margin: 0.25em 0; }
-    .output-modal-body code {
-      font-family: var(--font-mono); font-size: 0.78rem;
-      background: var(--bg); padding: 2px 6px; border-radius: 4px; color: var(--cyan);
+    .modal-body pre {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      padding: 14px; margin: 0.6em 0; overflow-x: auto;
     }
-    .output-modal-body pre {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-      padding: 1rem; margin: 0.75em 0; overflow-x: auto;
+    .modal-body pre code { background: none; padding: 0; color: var(--text); font-size: 12px; }
+    .modal-body a { color: var(--accent); }
+    .modal-body a:hover { text-decoration: underline; }
+    .modal-body strong { color: var(--text); }
+    .modal-body blockquote {
+      border-left: 2px solid var(--accent); padding-left: 1em; margin: 0.6em 0;
+      color: var(--text-2); font-style: italic;
     }
-    .output-modal-body pre code { background: none; padding: 0; color: var(--text); font-size: 0.75rem; }
-    .output-modal-body a { color: var(--cyan); text-decoration: none; }
-    .output-modal-body a:hover { text-decoration: underline; }
-    .output-modal-body strong { color: var(--text-bright); }
-    .output-modal-body blockquote {
-      border-left: 3px solid var(--cyan); padding-left: 1em; margin: 0.75em 0;
-      color: var(--text-dim); font-style: italic;
-    }
-    .output-modal-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
-    .output-modal-body table { border-collapse: collapse; margin: 0.75em 0; width: 100%; }
-    .output-modal-body table th, .output-modal-body table td {
-      border: 1px solid var(--border); padding: 0.4em 0.75em; font-size: 0.78rem;
-    }
-    .output-modal-body table th { background: var(--bg); color: var(--text-bright); }
+    .modal-body hr { border: none; border-top: 1px solid var(--border); margin: 1.2em 0; }
+    .modal-body table { border-collapse: collapse; margin: 0.6em 0; width: 100%; }
+    .modal-body table th, .modal-body table td { border: 1px solid var(--border); padding: 5px 10px; font-size: 12px; }
+    .modal-body table th { background: var(--bg); color: var(--text); }
 
-    footer { text-align: center; color: var(--text-dim); font-size: 0.7rem; font-family: var(--font-mono); padding-top: 1rem; border-top: 1px solid var(--border); }
-
-    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } .charts-grid { grid-template-columns: 1fr; } .shell { padding: 1rem; } }
-    @media (max-width: 600px) { .kpi-grid { grid-template-columns: 1fr; } }
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar { width: var(--swc); }
+      .main { margin-left: var(--swc); }
+      body.sb-collapsed .sidebar { width: var(--swc); }
+      .content { padding: 16px 16px 40px; }
+    }
+    @media (max-width: 480px) {
+      .kpi-row { grid-template-columns: 1fr 1fr; }
+      .range-bar { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
-  <div class="shell">
 
-    <!-- Header -->
-    <header class="header">
-      <div class="header-left">
-        <a href="/" style="text-decoration:none;"><div class="logo">H</div></a>
-        <h1>{{ page_title }}</h1>
-      </div>
-      <div class="header-right">
-        <div class="header-tag"><span class="live-dot"></span>OBSERVER MODE</div>
-      </div>
-    </header>
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <a class="sb-brand-link" href="/">
+        <div class="sb-icon">H</div>
+        <span class="sb-name">Hermes</span>
+      </a>
+      <button class="sb-toggle" id="sbToggle" title="Toggle sidebar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15,18 9,12 15,6"/>
+        </svg>
+      </button>
+    </div>
 
-    {% if profile_name %}
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb">
-      <a href="/">Dashboard</a>
-      <span class="sep">/</span>
-      <span class="current">{{ profile_name }}</span>
+    <nav class="sb-nav">
+      <div class="sb-group">
+        <div class="sb-group-label">General</div>
+        <a href="/" class="sb-item {% if not profile_name %}active{% endif %}">
+          <span class="sb-item-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          </span>
+          <span class="sb-item-label">Overview</span>
+        </a>
+      </div>
+
+      {% if sidebar_profiles %}
+      <div class="sb-group">
+        <div class="sb-group-label">Profiles</div>
+        {% for p in sidebar_profiles %}
+        <a href="/profiles/{{ p.name }}" class="sb-item {% if profile_name == p.name %}active{% endif %}">
+          <span class="sb-profile-dot {% if p.systemd_state == 'active' %}is-active{% endif %}"></span>
+          <span class="sb-item-label">{{ p.name }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="sb-group">
+        <div class="sb-group-label">Jobs</div>
+        <a href="#cron-section" class="sb-item" onclick="scrollToCron(event)">
+          <span class="sb-item-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <polyline points="12,6 12,12 15.5,14.5"/>
+            </svg>
+          </span>
+          <span class="sb-item-label">Cron Jobs</span>
+        </a>
+      </div>
     </nav>
 
-    <!-- Profile info card -->
-    <div class="profile-header-card">
-      <div class="profile-info">
-        <h2>{{ profile_name }}</h2>
-        {% if page_subtitle %}<div class="subtitle">{{ page_subtitle }}</div>{% endif %}
+    <div class="sb-footer">
+      <span class="sb-footer-text">observer · v0.1.0</span>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+    <div class="content">
+
+      <!-- Page header -->
+      <div class="page-head">
+        <div class="page-head-left">
+          {% if profile_name %}
+          <nav class="breadcrumb">
+            <a href="/" class="bc-link">Overview</a>
+            <span class="bc-sep">/</span>
+            <span class="bc-current">{{ profile_name }}</span>
+          </nav>
+          {% endif %}
+          <h1 class="page-title">{{ page_title }}</h1>
+          {% if page_subtitle %}<p class="page-sub">{{ page_subtitle }}</p>{% endif %}
+        </div>
+        <div class="live-badge"><span class="live-dot"></span>live</div>
       </div>
-      {% if profiles|length > 0 %}
-      <div style="display:flex; gap:1.5rem; align-items:center;">
+
+      <!-- Range bar -->
+      <div class="range-bar">
+        <div class="range-presets">
+          <button class="range-btn active" data-range="all" onclick="setRange(this,'all')">All time</button>
+          <button class="range-btn" data-range="30d" onclick="setRange(this,'30d')">30d</button>
+          <button class="range-btn" data-range="7d" onclick="setRange(this,'7d')">7d</button>
+          <button class="range-btn" data-range="24h" onclick="setRange(this,'24h')">24h</button>
+        </div>
+        <div class="range-custom-group">
+          <label>From</label>
+          <input type="date" class="date-input" id="customSince" onchange="setCustomRange()">
+          <label>To</label>
+          <input type="date" class="date-input" id="customUntil" onchange="setCustomRange()">
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="kpi-row" id="kpi-container">
+        {% include "partials/kpi.html" %}
+      </div>
+
+      <!-- Charts + heatmap -->
+      <div id="charts-container">
+        {% include "partials/charts.html" %}
+      </div>
+
+      <!-- Profile status card (profile pages only) -->
+      {% if profile_name and profiles|length > 0 %}
+      {% set p = profiles[0] %}
+      <div class="profile-status-card">
         <div>
-          {% set p = profiles[0] %}
+          <div class="psc-name">{{ profile_name }}</div>
+          {% if page_subtitle %}<div class="psc-sub">{{ page_subtitle }}</div>{% endif %}
+        </div>
+        <div>
           {% if p.systemd_state == 'active' %}
             <span class="badge badge-active"><span class="pulse"></span>active</span>
           {% elif p.systemd_state == 'inactive' %}
@@ -335,139 +730,129 @@
         </div>
       </div>
       {% endif %}
-    </div>
-    {% endif %}
 
-    <!-- Range selector -->
-    <div class="range-bar">
-      <button class="range-btn active" data-range="all" onclick="setRange(this, 'all')">All</button>
-      <button class="range-btn" data-range="30d" onclick="setRange(this, '30d')">30d</button>
-      <button class="range-btn" data-range="7d" onclick="setRange(this, '7d')">7d</button>
-      <button class="range-btn" data-range="24h" onclick="setRange(this, '24h')">24h</button>
-      <span class="range-sep">|</span>
-      <label class="filter-label" style="margin-left:4px;">From</label>
-      <input type="date" class="range-custom" id="customSince" onchange="setCustomRange()">
-      <label class="filter-label">To</label>
-      <input type="date" class="range-custom" id="customUntil" onchange="setCustomRange()">
-    </div>
-
-    <!-- KPI row -->
-    <div class="kpi-grid" id="kpi-container">
-      {% include "partials/kpi.html" %}
-    </div>
-
-    <!-- Charts container -->
-    <div id="charts-container">
-      {% include "partials/charts.html" %}
-    </div>
-
-    {% if not profile_name %}
-    <!-- Profiles table -->
-    <div class="table-card">
-      <div class="section-header">
-        <span class="section-title">Profiles</span>
-        <span class="section-count">{{ profiles|length }}</span>
+      <!-- Profiles table (overview only) -->
+      {% if not profile_name %}
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Profiles</span>
+          <span class="card-count">{{ profiles|length }}</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Model</th><th>Status</th><th>Sessions</th><th>Last Activity</th><th>Cost</th></tr>
+          </thead>
+          <tbody hx-get="/partials/profiles" hx-trigger="every 30s" hx-swap="innerHTML">
+            {% include "partials/profiles.html" %}
+          </tbody>
+        </table>
       </div>
-      <table>
-        <thead>
-          <tr><th>Name</th><th>Model</th><th>Status</th><th>Sessions</th><th>Last Activity</th><th>Cost</th></tr>
-        </thead>
-        <tbody hx-get="/partials/profiles" hx-trigger="every 30s" hx-swap="innerHTML">
-          {% include "partials/profiles.html" %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
+      {% endif %}
 
-    <!-- Sessions table -->
-    <div class="table-card" id="sessions-card">
-      <div class="section-header">
-        <span class="section-title">Sessions</span>
-        <span class="section-count" id="sessions-total">{{ sessions.total }}</span>
-      </div>
-      <div class="session-controls">
-        <label class="filter-label">Source</label>
-        <select class="filter-select" id="filterSource" onchange="loadSessions()">
-          <option value="">All</option>
-          {% for s in filters.sources %}
-            <option value="{{ s }}">{{ s }}</option>
-          {% endfor %}
-        </select>
-        <label class="filter-label">Model</label>
-        <select class="filter-select" id="filterModel" onchange="loadSessions()">
-          <option value="">All</option>
-          {% for m in filters.models %}
-            <option value="{{ m }}">{{ m.split('/')[-1] }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Session</th><th>Source</th><th>Model</th>
-            <th>Msgs</th><th>Tools</th><th>In Tokens</th><th>Out Tokens</th>
-            <th>Started</th><th>Cost</th>
-          </tr>
-        </thead>
-        <tbody id="sessions-body">
-          {% include "partials/sessions.html" %}
-        </tbody>
-      </table>
-      <div class="pagination">
-        <span class="pagination-info" id="pagination-info"></span>
-        <div class="pagination-btns">
-          <button class="page-btn" id="btnPrev" onclick="paginate(-1)" disabled>&lt; Prev</button>
-          <button class="page-btn" id="btnNext" onclick="paginate(1)">&gt; Next</button>
+      <!-- Sessions table -->
+      <div class="card" id="sessions-card">
+        <div class="card-header">
+          <span class="card-title">Sessions</span>
+          <span class="card-count" id="sessions-total">{{ sessions.total }}</span>
+        </div>
+        <div class="session-controls">
+          <div class="filter-group">
+            <label>Source</label>
+            <select id="filterSource" onchange="loadSessions()">
+              <option value="">All sources</option>
+              {% for s in filters.sources %}
+                <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Model</label>
+            <select id="filterModel" onchange="loadSessions()">
+              <option value="">All models</option>
+              {% for m in filters.models %}
+                <option value="{{ m }}">{{ m.split('/')[-1] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Session</th><th>Source</th><th>Model</th>
+              <th>Msgs</th><th>Tools</th><th>In</th><th>Out</th>
+              <th>Started</th><th>Cost</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-body">
+            {% include "partials/sessions.html" %}
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span class="pag-info" id="pagination-info"></span>
+          <div class="pag-btns">
+            <button class="btn-page" id="btnPrev" onclick="paginate(-1)" disabled>← Prev</button>
+            <button class="btn-page" id="btnNext" onclick="paginate(1)">Next →</button>
+          </div>
         </div>
       </div>
+
+      <!-- Cron section -->
+      <div id="cron-section">
+        {% include "partials/cron.html" %}
+      </div>
+
     </div>
-
-    <!-- Cron section -->
-    {% include "partials/cron.html" %}
-
-    <footer>hermes-controlplane v0.1.0 — read-only observer — auto-refresh 30s</footer>
   </div>
 
-  <!-- Output content modal -->
-  <div class="output-modal-overlay" id="output-modal" onclick="if(event.target===this)closeOutputModal()">
-    <div class="output-modal">
-      <div class="output-modal-header">
+  <!-- Output modal -->
+  <div class="modal-overlay" id="output-modal" onclick="if(event.target===this)closeOutputModal()">
+    <div class="modal">
+      <div class="modal-header">
         <h3 id="output-modal-title"></h3>
-        <button class="output-modal-close" onclick="closeOutputModal()">&times;</button>
+        <button class="modal-close" onclick="closeOutputModal()">✕</button>
       </div>
-      <div class="output-modal-body" id="output-modal-body"></div>
+      <div class="modal-body" id="output-modal-body"></div>
     </div>
   </div>
 
   <script>
-    Chart.defaults.color = '#5a7091';
-    Chart.defaults.borderColor = 'rgba(28,45,74,0.5)';
-    Chart.defaults.font.family = "'DM Mono', monospace";
+    Chart.defaults.color = '#6b7280';
+    Chart.defaults.borderColor = 'rgba(30,32,40,0.9)';
+    Chart.defaults.font.family = "'IBM Plex Mono', monospace";
     Chart.defaults.font.size = 11;
 
-    // --- Date formatting ---
+    // ── Sidebar toggle (persisted) ──
+    (function() {
+      if (localStorage.getItem('sb-collapsed') === '1') document.body.classList.add('sb-collapsed');
+      document.getElementById('sbToggle').addEventListener('click', () => {
+        document.body.classList.toggle('sb-collapsed');
+        localStorage.setItem('sb-collapsed', document.body.classList.contains('sb-collapsed') ? '1' : '0');
+      });
+    })();
+
+    function scrollToCron(e) {
+      const el = document.getElementById('cron-section');
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+
+    // ── Date formatting ──
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     function fmtDate(raw) {
       if (!raw || raw === '—') return '—';
       const d = new Date(raw);
       if (isNaN(d)) return raw;
       const now = new Date();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      const time = `${hh}:${mm}`;
-      const isToday = d.toDateString() === now.toDateString();
-      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-      const isYesterday = d.toDateString() === yesterday.toDateString();
-      if (isToday) return `Today ${time}`;
-      if (isYesterday) return `Yesterday ${time}`;
-      const mon = MONTHS[d.getMonth()];
-      const day = d.getDate();
-      if (d.getFullYear() === now.getFullYear()) return `${mon} ${day}, ${time}`;
-      return `${mon} ${day}, ${d.getFullYear()} ${time}`;
+      const hh = String(d.getHours()).padStart(2,'0');
+      const mm = String(d.getMinutes()).padStart(2,'0');
+      const t = `${hh}:${mm}`;
+      if (d.toDateString() === now.toDateString()) return `Today ${t}`;
+      const y = new Date(now); y.setDate(now.getDate()-1);
+      if (d.toDateString() === y.toDateString()) return `Yesterday ${t}`;
+      if (d.getFullYear() === now.getFullYear()) return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${t}`;
+      return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${t}`;
     }
-
     function formatAllDates(root) {
-      (root || document).querySelectorAll('time[data-ts]').forEach(el => {
+      (root||document).querySelectorAll('time[data-ts]').forEach(el => {
         el.textContent = fmtDate(el.getAttribute('data-ts'));
         el.title = el.getAttribute('data-ts');
       });
@@ -475,29 +860,27 @@
     formatAllDates();
     document.body.addEventListener('htmx:afterSwap', e => formatAllDates(e.detail.target));
 
-    // --- State ---
+    // ── State ──
     const API_PREFIX = '{{ api_prefix }}';
     const PROFILE = '{{ profile_name or "" }}';
     let currentRange = 'all';
-    let customSince = null;
-    let customUntil = null;
+    let customSince = null, customUntil = null;
     let sessionsOffset = 0;
     const sessionsLimit = 20;
     let sessionsTotal = {{ sessions.total }};
 
     function rangeParams() {
-      const params = new URLSearchParams();
-      if (customSince) params.set('since', (new Date(customSince + 'T00:00:00').getTime() / 1000).toString());
-      if (customUntil) params.set('until', (new Date(customUntil + 'T23:59:59').getTime() / 1000).toString());
-      if (!customSince && !customUntil && currentRange && currentRange !== 'all') params.set('range', currentRange);
-      if (PROFILE) params.set('profile', PROFILE);
-      return params.toString();
+      const p = new URLSearchParams();
+      if (customSince) p.set('since', (new Date(customSince+'T00:00:00').getTime()/1000).toString());
+      if (customUntil) p.set('until', (new Date(customUntil+'T23:59:59').getTime()/1000).toString());
+      if (!customSince && !customUntil && currentRange && currentRange !== 'all') p.set('range', currentRange);
+      if (PROFILE) p.set('profile', PROFILE);
+      return p.toString();
     }
 
     function setRange(btn, range) {
       currentRange = range;
-      customSince = null;
-      customUntil = null;
+      customSince = null; customUntil = null;
       document.getElementById('customSince').value = '';
       document.getElementById('customUntil').value = '';
       document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
@@ -518,8 +901,8 @@
 
     function refreshAll() {
       const rp = rangeParams();
-      htmx.ajax('GET', '/partials/kpi?' + rp, { target: '#kpi-container', swap: 'innerHTML' });
-      htmx.ajax('GET', '/partials/charts?' + rp, { target: '#charts-container', swap: 'innerHTML' });
+      htmx.ajax('GET', '/partials/kpi?'+rp, { target:'#kpi-container', swap:'innerHTML' });
+      htmx.ajax('GET', '/partials/charts?'+rp, { target:'#charts-container', swap:'innerHTML' });
       loadSessions();
     }
 
@@ -531,14 +914,12 @@
       params.set('offset', sessionsOffset);
       if (source) params.set('source', source);
       if (model) params.set('model', model);
-
-      const apiUrl = (API_PREFIX || '/api') + '/sessions/recent?' + params.toString();
-      fetch(apiUrl)
+      fetch((API_PREFIX||'/api') + '/sessions/recent?' + params)
         .then(r => r.json())
         .then(data => {
           sessionsTotal = data.total;
           document.getElementById('sessions-total').textContent = data.total;
-          htmx.ajax('GET', '/partials/sessions?' + params.toString(), { target: '#sessions-body', swap: 'innerHTML' });
+          htmx.ajax('GET', '/partials/sessions?'+params, { target:'#sessions-body', swap:'innerHTML' });
           updatePagination();
         });
     }
@@ -547,7 +928,7 @@
       const start = sessionsOffset + 1;
       const end = Math.min(sessionsOffset + sessionsLimit, sessionsTotal);
       document.getElementById('pagination-info').textContent =
-        sessionsTotal > 0 ? `${start}\u2013${end} of ${sessionsTotal}` : 'No sessions';
+        sessionsTotal > 0 ? `${start}–${end} of ${sessionsTotal}` : 'No sessions';
       document.getElementById('btnPrev').disabled = sessionsOffset <= 0;
       document.getElementById('btnNext').disabled = sessionsOffset + sessionsLimit >= sessionsTotal;
     }
@@ -556,10 +937,9 @@
       sessionsOffset = Math.max(0, sessionsOffset + dir * sessionsLimit);
       loadSessions();
     }
-
     updatePagination();
 
-    // --- Cron output toggle & modal ---
+    // ── Cron outputs ──
     const outputsLoaded = {};
     function toggleOutputs(jobId) {
       const row = document.getElementById('outputs-' + jobId);
@@ -569,18 +949,16 @@
       if (!visible && !outputsLoaded[jobId]) {
         outputsLoaded[jobId] = true;
         const apiBase = API_PREFIX || '/api';
-        const url = PROFILE
-          ? `${apiBase}/cron/jobs/${jobId}/outputs`
-          : `/api/cron/jobs/${jobId}/outputs`;
+        const url = PROFILE ? `${apiBase}/cron/jobs/${jobId}/outputs` : `/api/cron/jobs/${jobId}/outputs`;
         fetch(url)
           .then(r => r.json())
           .then(outputs => {
-            const container = document.getElementById('output-list-' + jobId);
+            const c = document.getElementById('output-list-' + jobId);
             if (!outputs.length) {
-              container.innerHTML = '<div class="dim" style="padding:1rem 1.5rem;font-size:0.75rem;">No outputs</div>';
+              c.innerHTML = '<div class="dim" style="padding:10px 20px;font-size:11px;">No outputs</div>';
               return;
             }
-            container.innerHTML = outputs.map(o =>
+            c.innerHTML = outputs.map(o =>
               `<div class="output-item" onclick="showOutput('${jobId}','${o.filename}')">
                 <span class="ts">${fmtDate(o.timestamp)}</span>
                 <span class="sz">${(o.size_bytes/1024).toFixed(1)}KB</span>
@@ -594,25 +972,23 @@
       const overlay = document.getElementById('output-modal');
       const title = document.getElementById('output-modal-title');
       const body = document.getElementById('output-modal-body');
-      const stem = filename.replace('.md', '');
-      title.textContent = `${jobId} / ${fmtDate(stem.replace('_', 'T').replace(/-/g, (m, i, s) => i > 9 ? ':' : '-'))}`;
-      body.innerHTML = '<div class="dim">Loading...</div>';
+      const stem = filename.replace('.md','');
+      title.textContent = `${jobId} / ${fmtDate(stem.replace('_','T').replace(/-/g,(m,i)=>i>9?':':'-'))}`;
+      body.innerHTML = '<p class="dim" style="font-size:12px;">Loading…</p>';
       overlay.classList.add('open');
       const apiBase = API_PREFIX || '/api';
-      const url = PROFILE
-        ? `${apiBase}/cron/jobs/${jobId}/outputs/${filename}`
-        : `/api/cron/jobs/${jobId}/outputs/${filename}`;
+      const url = PROFILE ? `${apiBase}/cron/jobs/${jobId}/outputs/${filename}` : `/api/cron/jobs/${jobId}/outputs/${filename}`;
       fetch(url)
         .then(r => r.json())
         .then(data => {
           if (typeof marked !== 'undefined') {
             body.innerHTML = marked.parse(data.content);
-            body.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+            body.querySelectorAll('a').forEach(a => { a.target='_blank'; a.rel='noopener'; });
           } else {
             body.textContent = data.content;
           }
         })
-        .catch(() => { body.innerHTML = '<div class="dim">Error loading output.</div>'; });
+        .catch(() => { body.innerHTML = '<p class="dim" style="font-size:12px;">Error loading output.</p>'; });
     }
 
     function closeOutputModal() {
@@ -620,10 +996,9 @@
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOutputModal(); });
 
-    // Auto-refresh every 30s
+    // Auto-refresh KPI every 30s
     setInterval(() => {
-      const rp = rangeParams();
-      htmx.ajax('GET', '/partials/kpi?' + rp, { target: '#kpi-container', swap: 'innerHTML' });
+      htmx.ajax('GET', '/partials/kpi?'+rangeParams(), { target:'#kpi-container', swap:'innerHTML' });
     }, 30000);
   </script>
 </body>

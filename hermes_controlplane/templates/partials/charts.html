@@ -18,7 +18,7 @@
     {% for h in hourly %}
       {% set intensity = (h.messages / max_msgs) if max_msgs > 0 else 0 %}
       <div class="heatmap-cell"
-           style="background: rgba(34, 211, 238, {{ (intensity * 0.7 + 0.05)|round(2) }});">
+           style="background: rgba(127, 168, 245, {{ (intensity * 0.65 + 0.06)|round(2) }});">
         <div class="tooltip">{{ '%02d' % h.hour }}:00 — {{ h.messages }} msgs</div>
       </div>
     {% endfor %}
@@ -40,11 +40,17 @@
 
 <script>
 (function() {
-  const COLORS = {
-    cyan: '#22d3ee', purple: '#a78bfa', amber: '#fbbf24',
-    green: '#34d399', blue: '#60a5fa', pink: '#f472b6', red: '#f87171',
+  const C = {
+    accent: '#7fa8f5',
+    amber:  '#fbbf24',
+    green:  '#34d399',
+    purple: '#a78bfa',
+    blue:   '#60a5fa',
+    rose:   '#fb7185',
+    teal:   '#2dd4bf',
   };
-  const PALETTE = [COLORS.cyan, COLORS.amber, COLORS.purple, COLORS.green, COLORS.blue, COLORS.pink, COLORS.red];
+  const PALETTE = [C.accent, C.amber, C.purple, C.green, C.blue, C.rose, C.teal];
+  const GRID = 'rgba(30,32,40,0.9)';
 
   const costData = {{ costs_by_model | tojson }};
   new Chart(document.getElementById('chartCostModel'), {
@@ -53,16 +59,16 @@
       labels: costData.map(d => d.model.split('/').pop()),
       datasets: [{
         data: costData.map(d => d.cost_usd),
-        backgroundColor: costData.map((_, i) => PALETTE[i % PALETTE.length] + '33'),
+        backgroundColor: costData.map((_, i) => PALETTE[i % PALETTE.length] + '28'),
         borderColor: costData.map((_, i) => PALETTE[i % PALETTE.length]),
-        borderWidth: 1, borderRadius: 4,
+        borderWidth: 1, borderRadius: 3,
       }]
     },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `$${ctx.parsed.x.toFixed(4)}` } } },
       scales: {
-        x: { grid: { color: 'rgba(28,45,74,0.3)' }, ticks: { callback: v => `$${v}` } },
+        x: { grid: { color: GRID }, ticks: { callback: v => `$${v}` } },
         y: { grid: { display: false } }
       }
     }
@@ -75,16 +81,16 @@
       labels: srcData.map(d => d.source),
       datasets: [{
         data: srcData.map(d => d.sessions),
-        backgroundColor: srcData.map((_, i) => PALETTE[i % PALETTE.length] + '55'),
+        backgroundColor: srcData.map((_, i) => PALETTE[i % PALETTE.length] + '45'),
         borderColor: srcData.map((_, i) => PALETTE[i % PALETTE.length]),
-        borderWidth: 1, hoverOffset: 6,
+        borderWidth: 1, hoverOffset: 5,
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false, cutout: '60%',
+      responsive: true, maintainAspectRatio: false, cutout: '62%',
       plugins: {
-        legend: { position: 'right', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle' } },
-        tooltip: { callbacks: { afterLabel: ctx => { const s = srcData[ctx.dataIndex]; return `${s.messages} msgs \u00b7 $${s.cost_usd.toFixed(2)}`; } } }
+        legend: { position: 'right', labels: { padding: 14, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: { callbacks: { afterLabel: ctx => { const s = srcData[ctx.dataIndex]; return `${s.messages} msgs · $${s.cost_usd.toFixed(2)}`; } } }
       }
     }
   });
@@ -97,24 +103,26 @@
       datasets: [
         {
           label: 'Messages', data: dailyData.map(d => d.messages),
-          borderColor: COLORS.cyan, backgroundColor: COLORS.cyan + '15',
-          fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: COLORS.cyan, yAxisID: 'y',
+          borderColor: C.accent, backgroundColor: C.accent + '12',
+          fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5,
+          pointBackgroundColor: C.accent, yAxisID: 'y',
         },
         {
           label: 'Cost ($)', data: dailyData.map(d => d.cost_usd),
-          borderColor: COLORS.amber, backgroundColor: COLORS.amber + '15',
-          fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: COLORS.amber, yAxisID: 'y1',
+          borderColor: C.amber, backgroundColor: C.amber + '12',
+          fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5,
+          pointBackgroundColor: C.amber, yAxisID: 'y1',
         }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 20 } } },
+      plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 18 } } },
       scales: {
-        x: { grid: { color: 'rgba(28,45,74,0.3)' } },
-        y: { position: 'left', grid: { color: 'rgba(28,45,74,0.3)' }, title: { display: true, text: 'Messages', color: COLORS.cyan } },
-        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cost ($)', color: COLORS.amber }, ticks: { callback: v => `$${v}` } },
+        x: { grid: { color: GRID } },
+        y: { position: 'left', grid: { color: GRID }, title: { display: true, text: 'Messages', color: C.accent } },
+        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cost ($)', color: C.amber }, ticks: { callback: v => `$${v}` } },
       }
     }
   });

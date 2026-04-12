@@ -329,6 +329,7 @@ async def dashboard(request: Request):
         name="dashboard.html",
         context={
             "profiles": profiles,
+            "sidebar_profiles": profiles,
             "sessions": sessions,
             "overview": overview,
             "costs_by_model": costs_by_model,
@@ -339,7 +340,7 @@ async def dashboard(request: Request):
             "cron_jobs": cron_jobs,
             "cron_output_jobs": cron_output_jobs,
             "api_prefix": "",
-            "page_title": "Hermes Control Plane",
+            "page_title": "Overview",
             "page_subtitle": None,
             "profile_name": None,
         },
@@ -351,6 +352,7 @@ async def profile_dashboard(request: Request, name: str):
     db = _resolve_profile_db(name)
     profile_dir = settings.profiles_dir / name
     summary = await get_profile_summary(name)
+    sidebar_profiles = await get_all_profiles()
     filters = await get_filter_options(db_path=db)
     sessions = await get_recent_sessions(limit=20, db_path=db)
     overview = await get_overview_stats(db_path=db)
@@ -365,6 +367,7 @@ async def profile_dashboard(request: Request, name: str):
         name="dashboard.html",
         context={
             "profiles": [summary.to_dict()],
+            "sidebar_profiles": sidebar_profiles,
             "sessions": sessions,
             "overview": overview,
             "costs_by_model": costs_by_model,
@@ -375,7 +378,7 @@ async def profile_dashboard(request: Request, name: str):
             "cron_jobs": cron_jobs,
             "cron_output_jobs": cron_output_jobs,
             "api_prefix": f"/api/profiles/{name}",
-            "page_title": f"Profile: {name}",
+            "page_title": name,
             "page_subtitle": f"{summary.model or 'unknown model'} via {summary.provider or 'unknown'}",
             "profile_name": name,
         },
