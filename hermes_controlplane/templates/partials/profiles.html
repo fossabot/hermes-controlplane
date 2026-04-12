@@ -1,0 +1,18 @@
+{% for p in profiles %}
+<tr>
+  <td class="mono"><a href="/profiles/{{ p.name }}" class="profile-link">{{ p.name }}</a></td>
+  <td class="mono model-name">{{ (p.model or '—')[:30] }}</td>
+  <td>
+    {% if p.systemd_state == 'active' %}
+      <span class="badge badge-active"><span class="pulse"></span>active</span>
+    {% elif p.systemd_state == 'inactive' %}
+      <span class="badge badge-inactive">inactive</span>
+    {% else %}
+      <span class="badge badge-unknown">{{ p.systemd_state }}</span>
+    {% endif %}
+  </td>
+  <td>{{ p.session_count }}</td>
+  <td class="mono dim">{% if p.last_activity_at %}<time data-ts="{{ p.last_activity_at }}">{{ p.last_activity_at[:19] }}</time>{% else %}—{% endif %}</td>
+  <td class="cost">${{ '%.4f' % p.estimated_cost_usd }}</td>
+</tr>
+{% endfor %}

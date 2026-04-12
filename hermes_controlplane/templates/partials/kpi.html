@@ -1,0 +1,20 @@
+<div class="kpi-card">
+  <div class="kpi-value">{{ overview.total_sessions }}</div>
+  <div class="kpi-label">Sessions</div>
+  <div class="kpi-sub">{{ overview.active_sessions }} active</div>
+</div>
+<div class="kpi-card">
+  <div class="kpi-value">{{ "{:,}".format(overview.total_messages) }}</div>
+  <div class="kpi-label">Messages</div>
+  <div class="kpi-sub">{{ overview.distinct_sources }} sources</div>
+</div>
+<div class="kpi-card kpi-cost">
+  <div class="kpi-value">${{ "%.2f"|format(overview.total_cost_usd) }}</div>
+  <div class="kpi-label">Total Cost</div>
+  <div class="kpi-sub">{{ overview.distinct_models }} models</div>
+</div>
+<div class="kpi-card">
+  <div class="kpi-value">{{ "{:,}".format(((overview.total_input_tokens + overview.total_output_tokens) / 1000000)|round(1)) }}M</div>
+  <div class="kpi-label">Tokens</div>
+  <div class="kpi-sub">{{ "{:,}".format((overview.total_cache_read_tokens / 1000000)|round(1)) }}M cached</div>
+</div>

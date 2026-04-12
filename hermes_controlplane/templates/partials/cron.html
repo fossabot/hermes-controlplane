@@ -1,0 +1,114 @@
+{% if cron_jobs %}
+<!-- Active Cron Jobs -->
+<div class="table-card">
+  <div class="section-header">
+    <span class="section-title">Cron Jobs</span>
+    <span class="section-count">{{ cron_jobs|length }}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Schedule</th><th>State</th><th>Runs</th>
+        <th>Last Run</th><th>Status</th><th>Next Run</th><th>Deliver</th><th>Outputs</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in cron_jobs %}
+      <tr>
+        <td>
+          <div class="cron-name">{{ j.name }}</div>
+          <div class="cron-id mono dim">{{ j.id }}</div>
+        </td>
+        <td class="mono">{{ j.schedule_display }}</td>
+        <td>
+          {% if j.enabled and j.state == 'scheduled' %}
+            <span class="badge badge-active"><span class="pulse"></span>scheduled</span>
+          {% elif j.state == 'paused' or not j.enabled %}
+            <span class="badge badge-unknown">paused</span>
+          {% elif j.state == 'running' %}
+            <span class="badge badge-active"><span class="pulse"></span>running</span>
+          {% elif j.state == 'completed' %}
+            <span class="badge" style="background:rgba(96,165,250,0.12);color:var(--blue);">completed</span>
+          {% else %}
+            <span class="badge badge-unknown">{{ j.state }}</span>
+          {% endif %}
+        </td>
+        <td class="mono">{{ j.repeat_completed }}{% if j.repeat_times %}/{{ j.repeat_times }}{% endif %}</td>
+        <td class="mono dim">{% if j.last_run_at %}<time data-ts="{{ j.last_run_at }}">{{ j.last_run_at[:19] }}</time>{% else %}—{% endif %}</td>
+        <td>
+          {% if j.last_status == 'ok' %}
+            <span style="color:var(--green);">ok</span>
+          {% elif j.last_status == 'error' %}
+            <span style="color:var(--red);" title="{{ j.last_error or '' }}">error</span>
+          {% elif j.last_status %}
+            <span class="dim">{{ j.last_status }}</span>
+          {% else %}
+            <span class="dim">—</span>
+          {% endif %}
+        </td>
+        <td class="mono dim">{% if j.next_run_at %}<time data-ts="{{ j.next_run_at }}">{{ j.next_run_at[:19] }}</time>{% else %}—{% endif %}</td>
+        <td><span class="source-badge source-{{ j.deliver or 'cli' }}">{{ j.deliver or '—' }}</span></td>
+        <td>
+          {% if j.output_count > 0 %}
+            <button class="page-btn" onclick="toggleOutputs('{{ j.id }}')">{{ j.output_count }} runs</button>
+          {% else %}
+            <span class="dim">0</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr class="output-row" id="outputs-{{ j.id }}" style="display:none;">
+        <td colspan="9" style="padding:0;">
+          <div class="output-list" id="output-list-{{ j.id }}">
+            <div class="dim" style="padding:1rem 1.5rem; font-size:0.75rem;">Loading outputs...</div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if cron_output_jobs %}
+<!-- Archived cron outputs (jobs no longer active but outputs exist) -->
+{% set active_ids = cron_jobs|map(attribute='id')|list %}
+{% set archived = [] %}
+{% for oj in cron_output_jobs %}
+  {% if oj.job_id not in active_ids %}
+    {% if archived.append(oj) %}{% endif %}
+  {% endif %}
+{% endfor %}
+{% if archived %}
+<div class="table-card">
+  <div class="section-header">
+    <span class="section-title">Archived Cron Outputs</span>
+    <span class="section-count">{{ archived|length }} jobs</span>
+  </div>
+  <table>
+    <thead>
+      <tr><th>Job ID</th><th>Outputs</th><th>Latest</th><th>Size</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for oj in archived %}
+      <tr>
+        <td class="mono">{{ oj.job_id }}</td>
+        <td class="mono">{{ oj.output_count }}</td>
+        <td class="mono dim"><time data-ts="{{ oj.latest_timestamp }}">{{ oj.latest_timestamp }}</time></td>
+        <td class="mono dim">{{ (oj.latest_size_bytes / 1024)|round(1) }}KB</td>
+        <td>
+          <button class="page-btn" onclick="toggleOutputs('{{ oj.job_id }}')">View</button>
+        </td>
+      </tr>
+      <tr class="output-row" id="outputs-{{ oj.job_id }}" style="display:none;">
+        <td colspan="5" style="padding:0;">
+          <div class="output-list" id="output-list-{{ oj.job_id }}">
+            <div class="dim" style="padding:1rem 1.5rem; font-size:0.75rem;">Loading outputs...</div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endif %}

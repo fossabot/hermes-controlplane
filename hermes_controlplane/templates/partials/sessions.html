@@ -1,0 +1,25 @@
+{% for s in sessions["items"] %}
+<tr>
+  <td class="mono">
+    {% if s.title %}
+      <span class="session-title" title="{{ s.id }}">{{ s.title[:35] }}</span>
+    {% else %}
+      {{ s.id[:20] }}
+    {% endif %}
+  </td>
+  <td><span class="source-badge source-{{ s.source }}">{{ s.source }}</span></td>
+  <td class="mono model-name">{{ (s.model or '—')[:25] }}</td>
+  <td>{{ s.message_count }}</td>
+  <td class="dim">{{ s.tool_call_count }}</td>
+  <td class="mono dim">{{ "{:,}".format(s.input_tokens) }}</td>
+  <td class="mono dim">{{ "{:,}".format(s.output_tokens) }}</td>
+  <td class="mono">{% if s.started_at %}<time data-ts="{{ s.started_at }}">{{ s.started_at[:19] }}</time>{% else %}—{% endif %}</td>
+  <td class="cost">
+    {% if s.cost_status == 'included' %}
+      <span class="cost-included" title="Included in subscription">incl.</span>
+    {% else %}
+      ${{ '%.4f' % s.estimated_cost_usd }}
+    {% endif %}
+  </td>
+</tr>
+{% endfor %}
