@@ -312,77 +312,102 @@ async def api_profile_cron_output_jobs(name: str):
 # HTML pages
 # =========================================================================
 
+def _base_ctx(sidebar_profiles, page_title, page_section, profile_name=None,
+              api_prefix="", page_subtitle=None, profiles=None):
+    return {
+        "sidebar_profiles": sidebar_profiles,
+        "profiles": profiles or [],
+        "page_title": page_title,
+        "page_subtitle": page_subtitle,
+        "page_section": page_section,
+        "profile_name": profile_name,
+        "api_prefix": api_prefix,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    filters = await get_filter_options()
-    profiles = await get_all_profiles()
-    sessions = await get_recent_sessions(limit=20)
+async def page_overview(request: Request):
+    sidebar_profiles = await get_all_profiles()
     overview = await get_overview_stats()
     costs_by_model = await get_costs_by_model()
     sources = await get_sessions_by_source()
     hourly = await get_hourly_activity()
     daily = await get_daily_stats()
+    ctx = _base_ctx(sidebar_profiles, "Overview", "overview")
+    ctx.update(overview=overview, costs_by_model=costs_by_model,
+               sources=sources, hourly=hourly, daily=daily)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
+
+
+@app.get("/sessions", response_class=HTMLResponse)
+async def page_sessions(request: Request):
+    sidebar_profiles = await get_all_profiles()
+    sessions = await get_recent_sessions(limit=20)
+    filters = await get_filter_options()
+    ctx = _base_ctx(sidebar_profiles, "Sessions", "sessions")
+    ctx.update(sessions=sessions, filters=filters)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
+
+
+@app.get("/cron", response_class=HTMLResponse)
+async def page_cron(request: Request):
+    sidebar_profiles = await get_all_profiles()
     cron_jobs = get_cron_jobs()
     cron_output_jobs = get_all_cron_output_jobs()
-    return templates.TemplateResponse(
-        request=request,
-        name="dashboard.html",
-        context={
-            "profiles": profiles,
-            "sidebar_profiles": profiles,
-            "sessions": sessions,
-            "overview": overview,
-            "costs_by_model": costs_by_model,
-            "sources": sources,
-            "hourly": hourly,
-            "daily": daily,
-            "filters": filters,
-            "cron_jobs": cron_jobs,
-            "cron_output_jobs": cron_output_jobs,
-            "api_prefix": "",
-            "page_title": "Overview",
-            "page_subtitle": None,
-            "profile_name": None,
-        },
-    )
+    ctx = _base_ctx(sidebar_profiles, "Cron Jobs", "cron")
+    ctx.update(cron_jobs=cron_jobs, cron_output_jobs=cron_output_jobs)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
 
 
 @app.get("/profiles/{name}", response_class=HTMLResponse)
-async def profile_dashboard(request: Request, name: str):
+async def page_profile_overview(request: Request, name: str):
     db = _resolve_profile_db(name)
-    profile_dir = settings.profiles_dir / name
     summary = await get_profile_summary(name)
     sidebar_profiles = await get_all_profiles()
-    filters = await get_filter_options(db_path=db)
-    sessions = await get_recent_sessions(limit=20, db_path=db)
     overview = await get_overview_stats(db_path=db)
     costs_by_model = await get_costs_by_model(db_path=db)
     sources = await get_sessions_by_source(db_path=db)
     hourly = await get_hourly_activity(db_path=db)
     daily = await get_daily_stats(db_path=db)
+    ctx = _base_ctx(sidebar_profiles, name, "overview", profile_name=name,
+                    api_prefix=f"/api/profiles/{name}",
+                    page_subtitle=f"{summary.model or 'unknown model'} via {summary.provider or 'unknown'}",
+                    profiles=[summary.to_dict()])
+    ctx.update(overview=overview, costs_by_model=costs_by_model,
+               sources=sources, hourly=hourly, daily=daily)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
+
+
+@app.get("/profiles/{name}/sessions", response_class=HTMLResponse)
+async def page_profile_sessions(request: Request, name: str):
+    db = _resolve_profile_db(name)
+    summary = await get_profile_summary(name)
+    sidebar_profiles = await get_all_profiles()
+    sessions = await get_recent_sessions(limit=20, db_path=db)
+    filters = await get_filter_options(db_path=db)
+    ctx = _base_ctx(sidebar_profiles, name, "sessions", profile_name=name,
+                    api_prefix=f"/api/profiles/{name}",
+                    page_subtitle=f"{summary.model or 'unknown model'} via {summary.provider or 'unknown'}",
+                    profiles=[summary.to_dict()])
+    ctx.update(sessions=sessions, filters=filters)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
+
+
+@app.get("/profiles/{name}/cron", response_class=HTMLResponse)
+async def page_profile_cron(request: Request, name: str):
+    profile_dir = settings.profiles_dir / name
+    if not profile_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+    summary = await get_profile_summary(name)
+    sidebar_profiles = await get_all_profiles()
     cron_jobs = get_cron_jobs(hermes_home=profile_dir)
     cron_output_jobs = get_all_cron_output_jobs(hermes_home=profile_dir)
-    return templates.TemplateResponse(
-        request=request,
-        name="dashboard.html",
-        context={
-            "profiles": [summary.to_dict()],
-            "sidebar_profiles": sidebar_profiles,
-            "sessions": sessions,
-            "overview": overview,
-            "costs_by_model": costs_by_model,
-            "sources": sources,
-            "hourly": hourly,
-            "daily": daily,
-            "filters": filters,
-            "cron_jobs": cron_jobs,
-            "cron_output_jobs": cron_output_jobs,
-            "api_prefix": f"/api/profiles/{name}",
-            "page_title": name,
-            "page_subtitle": f"{summary.model or 'unknown model'} via {summary.provider or 'unknown'}",
-            "profile_name": name,
-        },
-    )
+    ctx = _base_ctx(sidebar_profiles, name, "cron", profile_name=name,
+                    api_prefix=f"/api/profiles/{name}",
+                    page_subtitle=f"{summary.model or 'unknown model'} via {summary.provider or 'unknown'}",
+                    profiles=[summary.to_dict()])
+    ctx.update(cron_jobs=cron_jobs, cron_output_jobs=cron_output_jobs)
+    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
 
 
 # =========================================================================

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ page_title }} — Hermes CP</title>
+  <title>{{ page_title }}{% if profile_name %} · {{ profile_name }}{% endif %} — Hermes CP</title>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -68,7 +68,6 @@
       z-index: 50;
       overflow: hidden;
       transition: width 0.2s cubic-bezier(0.4,0,0.2,1);
-      flex-shrink: 0;
     }
     body.sb-collapsed .sidebar { width: var(--swc); }
 
@@ -82,28 +81,17 @@
       min-height: 54px;
     }
     .sb-brand-link {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      overflow: hidden;
-      flex: 1;
+      display: flex; align-items: center; gap: 10px; overflow: hidden; flex: 1;
     }
     .sb-icon {
-      width: 26px; height: 26px;
-      border-radius: 6px;
-      background: var(--accent);
-      color: #0c0d10;
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--accent); color: #0c0d10;
       display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 12px;
-      flex-shrink: 0;
-      letter-spacing: -0.02em;
+      font-weight: 700; font-size: 12px; flex-shrink: 0;
     }
     .sb-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text);
-      white-space: nowrap;
-      transition: opacity 0.15s;
+      font-size: 13px; font-weight: 600; color: var(--text);
+      white-space: nowrap; transition: opacity 0.15s;
     }
     body.sb-collapsed .sb-name { opacity: 0; pointer-events: none; }
 
@@ -111,19 +99,14 @@
       width: 22px; height: 22px;
       display: flex; align-items: center; justify-content: center;
       background: none; border: none; border-radius: 4px;
-      color: var(--text-3);
-      transition: color 0.12s, background 0.12s;
-      flex-shrink: 0;
+      color: var(--text-3); transition: color 0.12s, background 0.12s; flex-shrink: 0;
     }
     .sb-toggle:hover { color: var(--text-2); background: var(--surface-2); }
     .sb-toggle svg { transition: transform 0.2s; }
     body.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
 
     .sb-nav {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 6px 0;
+      flex: 1; overflow-y: auto; overflow-x: hidden; padding: 6px 0;
     }
     .sb-nav::-webkit-scrollbar { width: 3px; }
     .sb-nav::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
@@ -131,194 +114,153 @@
     .sb-group { padding: 2px 0; }
     .sb-group-label {
       padding: 8px 16px 2px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-3);
-      white-space: nowrap;
-      overflow: hidden;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-3);
+      white-space: nowrap; overflow: hidden;
       transition: opacity 0.15s, height 0.15s, padding 0.15s;
-      height: auto;
     }
-    body.sb-collapsed .sb-group-label {
-      opacity: 0;
-      height: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-    }
+    body.sb-collapsed .sb-group-label { opacity: 0; height: 0; padding-top: 0; padding-bottom: 0; }
 
     .sb-item {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 7px 16px;
-      color: var(--text-2);
-      font-size: 13px;
-      font-weight: 400;
-      transition: background 0.1s, color 0.1s;
-      white-space: nowrap;
-      position: relative;
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 16px; color: var(--text-2); font-size: 13px;
+      transition: background 0.1s, color 0.1s; white-space: nowrap; position: relative;
     }
     .sb-item:hover { background: var(--surface-2); color: var(--text); }
-    .sb-item.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-    }
+    .sb-item.active { background: var(--accent-dim); color: var(--accent); }
     .sb-item.active::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 5px; bottom: 5px;
-      width: 2px;
-      background: var(--accent);
-      border-radius: 0 2px 2px 0;
+      content: ''; position: absolute;
+      left: 0; top: 5px; bottom: 5px; width: 2px;
+      background: var(--accent); border-radius: 0 2px 2px 0;
     }
     .sb-item-icon {
-      width: 14px; height: 14px;
-      flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0.7;
+      width: 14px; height: 14px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; opacity: 0.7;
     }
     .sb-item.active .sb-item-icon { opacity: 1; }
-    .sb-item-label {
-      transition: opacity 0.15s;
-      overflow: hidden;
-    }
+    .sb-item-label { transition: opacity 0.15s; overflow: hidden; }
     body.sb-collapsed .sb-item-label { opacity: 0; }
 
     .sb-profile-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--text-3);
-      flex-shrink: 0;
-      margin: 0 4px;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-3); flex-shrink: 0; margin: 0 4px;
     }
     .sb-profile-dot.is-active { background: var(--green); }
     .sb-item.active .sb-profile-dot { background: var(--accent); }
 
+    /* Sub-items under active profile */
+    .sb-subitem {
+      display: flex; align-items: center; gap: 9px;
+      padding: 5px 16px 5px 36px;
+      color: var(--text-3); font-size: 12px;
+      transition: background 0.1s, color 0.1s;
+      white-space: nowrap; position: relative;
+    }
+    .sb-subitem:hover { background: var(--surface-2); color: var(--text-2); }
+    .sb-subitem.active { color: var(--accent); }
+    .sb-subitem.active::before {
+      content: ''; position: absolute;
+      left: 0; top: 4px; bottom: 4px; width: 2px;
+      background: var(--accent); border-radius: 0 2px 2px 0;
+    }
+    body.sb-collapsed .sb-subitem { display: none; }
+
     .sb-footer {
-      padding: 10px 16px;
-      border-top: 1px solid var(--border);
-      flex-shrink: 0;
+      padding: 10px 16px; border-top: 1px solid var(--border); flex-shrink: 0;
     }
     .sb-footer-text {
-      font-size: 10px;
-      color: var(--text-3);
-      font-family: var(--font-mono);
-      white-space: nowrap;
-      transition: opacity 0.15s;
+      font-size: 10px; color: var(--text-3); font-family: var(--font-mono);
+      white-space: nowrap; transition: opacity 0.15s;
     }
     body.sb-collapsed .sb-footer-text { opacity: 0; }
 
     /* ── Main ── */
     .main {
-      flex: 1;
-      min-width: 0;
+      flex: 1; min-width: 0;
       margin-left: var(--sw);
       transition: margin-left 0.2s cubic-bezier(0.4,0,0.2,1);
       overflow-y: auto;
     }
     body.sb-collapsed .main { margin-left: var(--swc); }
 
-    .content {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 28px 32px 56px;
-    }
+    .content { max-width: 1200px; margin: 0 auto; padding: 28px 32px 56px; }
 
     /* ── Page header ── */
     .page-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 20px;
+      display: flex; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 6px;
     }
-    .breadcrumb {
-      display: flex; align-items: center; gap: 5px;
-      margin-bottom: 6px;
-    }
+    .breadcrumb { display: flex; align-items: center; gap: 5px; margin-bottom: 6px; }
     .bc-link { font-size: 12px; color: var(--text-2); transition: color 0.12s; }
     .bc-link:hover { color: var(--text); }
     .bc-sep { font-size: 12px; color: var(--text-3); }
     .bc-current { font-size: 12px; color: var(--text); }
     .page-title {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--text);
-      letter-spacing: -0.03em;
-      line-height: 1.2;
+      font-size: 20px; font-weight: 600; color: var(--text);
+      letter-spacing: -0.03em; line-height: 1.2;
     }
-    .page-sub {
-      font-size: 12px;
-      color: var(--text-2);
-      font-family: var(--font-mono);
-      margin-top: 4px;
-    }
+    .page-sub { font-size: 12px; color: var(--text-2); font-family: var(--font-mono); margin-top: 3px; }
     .live-badge {
       display: flex; align-items: center; gap: 5px;
-      font-size: 10px; color: var(--text-3);
-      font-family: var(--font-mono);
-      padding: 4px 10px;
-      border: 1px solid var(--border-2); border-radius: 20px;
-      margin-top: 4px;
+      font-size: 10px; color: var(--text-3); font-family: var(--font-mono);
+      padding: 4px 10px; border: 1px solid var(--border-2); border-radius: 20px; margin-top: 4px;
     }
     .live-dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: var(--green);
+      width: 5px; height: 5px; border-radius: 50%; background: var(--green);
       animation: pulse-dot 2.5s ease-in-out infinite;
     }
     @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
 
+    /* ── Profile sub-nav ── */
+    .profile-subnav {
+      display: flex; gap: 0; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .subnav-item {
+      font-size: 13px; color: var(--text-2);
+      padding: 6px 16px 7px 0; margin-right: 8px;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color 0.1s, border-color 0.1s; white-space: nowrap;
+    }
+    .subnav-item:hover { color: var(--text); }
+    .subnav-item.active { color: var(--text); border-bottom-color: var(--accent); }
+
     /* ── Range bar ── */
     .range-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
     }
     .range-presets { display: flex; gap: 3px; }
     .range-btn {
       font-family: var(--font-mono); font-size: 11px;
       padding: 5px 12px; border-radius: var(--r);
-      border: 1px solid var(--border-2);
-      background: transparent; color: var(--text-2);
-      cursor: pointer; transition: all 0.1s;
+      border: 1px solid var(--border-2); background: transparent;
+      color: var(--text-2); cursor: pointer; transition: all 0.1s;
     }
     .range-btn:hover { border-color: var(--text-3); color: var(--text); }
-    .range-btn.active {
-      background: var(--accent-dim);
-      border-color: rgba(127,168,245,0.3);
-      color: var(--accent);
-    }
+    .range-btn.active { background: var(--accent-dim); border-color: rgba(127,168,245,0.3); color: var(--accent); }
     .range-custom-group { display: flex; align-items: center; gap: 7px; }
     .range-custom-group label { font-size: 10px; color: var(--text-3); font-family: var(--font-mono); }
     .date-input {
-      font-family: var(--font-mono); font-size: 11px;
-      padding: 4px 8px; border-radius: var(--r);
-      border: 1px solid var(--border-2); background: var(--surface);
-      color: var(--text); color-scheme: dark;
+      font-family: var(--font-mono); font-size: 11px; padding: 4px 8px;
+      border-radius: var(--r); border: 1px solid var(--border-2);
+      background: var(--surface); color: var(--text); color-scheme: dark;
     }
     .date-input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
     /* ── KPI row ── */
     .kpi-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 10px; margin-bottom: 20px;
     }
     .kpi-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 18px 20px;
-      transition: border-color 0.12s;
+      border-radius: var(--r); padding: 18px 20px; transition: border-color 0.12s;
     }
     .kpi-card:hover { border-color: var(--border-2); }
     .kpi-value {
       font-family: var(--font-mono); font-size: 26px; font-weight: 400;
-      color: var(--text); letter-spacing: -0.04em; line-height: 1;
-      margin-bottom: 7px;
+      color: var(--text); letter-spacing: -0.04em; line-height: 1; margin-bottom: 7px;
     }
     .kpi-cost .kpi-value { color: var(--amber); }
     .kpi-label {
@@ -331,10 +273,7 @@
     }
 
     /* ── Charts ── */
-    .charts-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 10px; margin-bottom: 20px;
-    }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
     .chart-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r); padding: 18px 20px;
@@ -350,14 +289,10 @@
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r); padding: 18px 20px; margin-bottom: 20px;
     }
-    .heatmap-grid {
-      display: grid; grid-template-columns: repeat(24, 1fr);
-      gap: 3px; margin-top: 10px;
-    }
+    .heatmap-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; margin-top: 10px; }
     .heatmap-cell {
-      aspect-ratio: 1; border-radius: 3px;
-      position: relative; cursor: default;
-      transition: transform 0.1s;
+      aspect-ratio: 1; border-radius: 3px; position: relative;
+      cursor: default; transition: transform 0.1s;
     }
     .heatmap-cell:hover { transform: scale(1.5); z-index: 2; }
     .heatmap-cell .tooltip {
@@ -369,14 +304,8 @@
       white-space: nowrap; z-index: 10; pointer-events: none;
     }
     .heatmap-cell:hover .tooltip { display: block; }
-    .heatmap-labels {
-      display: grid; grid-template-columns: repeat(24, 1fr);
-      gap: 3px; margin-top: 3px;
-    }
-    .heatmap-labels span {
-      font-family: var(--font-mono); font-size: 9px;
-      color: var(--text-3); text-align: center;
-    }
+    .heatmap-labels { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; margin-top: 3px; }
+    .heatmap-labels span { font-family: var(--font-mono); font-size: 9px; color: var(--text-3); text-align: center; }
 
     /* ── Profile status card ── */
     .profile-status-card {
@@ -397,14 +326,10 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 20px; border-bottom: 1px solid var(--border);
     }
-    .card-title {
-      font-size: 11px; font-weight: 600; color: var(--text);
-      text-transform: uppercase; letter-spacing: 0.07em;
-    }
+    .card-title { font-size: 11px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: 0.07em; }
     .card-count {
       font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
-      background: var(--surface-2); padding: 1px 8px;
-      border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface-2); padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border);
     }
 
     /* Section header (used in cron partial) */
@@ -412,26 +337,18 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 12px 20px; border-bottom: 1px solid var(--border);
     }
-    .section-title {
-      font-size: 11px; font-weight: 600; color: var(--text);
-      text-transform: uppercase; letter-spacing: 0.07em;
-    }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--text); text-transform: uppercase; letter-spacing: 0.07em; }
     .section-count {
       font-family: var(--font-mono); font-size: 11px; color: var(--text-3);
-      background: var(--surface-2); padding: 1px 8px;
-      border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface-2); padding: 1px 8px; border-radius: 10px; border: 1px solid var(--border);
     }
 
     /* ── Tables ── */
     table { width: 100%; border-collapse: collapse; }
-    th, td {
-      text-align: left; padding: 9px 20px;
-      border-bottom: 1px solid var(--border); font-size: 13px;
-    }
+    th, td { text-align: left; padding: 9px 20px; border-bottom: 1px solid var(--border); font-size: 13px; }
     th {
       background: var(--surface-2); color: var(--text-2);
-      font-weight: 500; font-size: 10px;
-      text-transform: uppercase; letter-spacing: 0.07em;
+      font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
     }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: rgba(127,168,245,0.025); }
@@ -444,22 +361,12 @@
     .session-title { color: var(--text); font-size: 13px; }
 
     /* ── Badges ── */
-    .badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 2px 9px; border-radius: 20px;
-      font-size: 11px; font-weight: 500;
-    }
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
     .badge-active { background: var(--green-dim); color: var(--green); }
     .badge-inactive { background: var(--red-dim); color: var(--red); }
     .badge-unknown { background: var(--amber-dim); color: var(--amber); }
-    .pulse {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: currentColor; animation: pulse-dot 2s ease-in-out infinite;
-    }
-    .source-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 4px;
-      font-family: var(--font-mono); font-size: 11px;
-    }
+    .pulse { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse-dot 2s ease-in-out infinite; }
+    .source-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; }
     .source-telegram { background: rgba(34,211,238,0.1); color: var(--cyan); }
     .source-cli { background: rgba(167,139,250,0.1); color: var(--purple); }
     .source-webhook { background: rgba(96,165,250,0.1); color: var(--blue); }
@@ -473,34 +380,28 @@
     .filter-group { display: flex; align-items: center; gap: 6px; }
     .filter-group label { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; }
     .filter-group select {
-      font-family: var(--font-mono); font-size: 11px;
-      padding: 3px 8px; border-radius: var(--r);
-      border: 1px solid var(--border-2); background: var(--bg);
-      color: var(--text); cursor: pointer; color-scheme: dark;
+      font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: var(--r);
+      border: 1px solid var(--border-2); background: var(--bg); color: var(--text);
+      cursor: pointer; color-scheme: dark;
     }
     .filter-group select:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
 
     /* ── Pagination ── */
-    .pagination {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 9px 20px; border-top: 1px solid var(--border);
-    }
+    .pagination { display: flex; align-items: center; justify-content: space-between; padding: 9px 20px; border-top: 1px solid var(--border); }
     .pag-info { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
     .pag-btns { display: flex; gap: 5px; }
     .btn-page {
-      font-family: var(--font-mono); font-size: 11px;
-      padding: 4px 12px; border-radius: var(--r);
+      font-family: var(--font-mono); font-size: 11px; padding: 4px 12px; border-radius: var(--r);
       border: 1px solid var(--border-2); background: transparent;
       color: var(--text-2); cursor: pointer; transition: all 0.1s;
     }
     .btn-page:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
     .btn-page:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* ── Profile link ── */
     .profile-link { color: var(--accent); transition: color 0.1s; }
     .profile-link:hover { color: var(--text); }
 
-    /* table-card (cron partial compatibility) */
+    /* table-card (cron partial) */
     .table-card {
       background: var(--surface); border: 1px solid var(--border);
       border-radius: var(--r); overflow: hidden; margin-bottom: 20px;
@@ -522,8 +423,7 @@
     .output-item .ts { font-family: var(--font-mono); color: var(--text-2); font-size: 11px; }
     .output-item .sz { font-family: var(--font-mono); color: var(--text-3); font-size: 10px; }
     .page-btn {
-      font-family: var(--font-mono); font-size: 11px;
-      padding: 3px 10px; border-radius: var(--r);
+      font-family: var(--font-mono); font-size: 11px; padding: 3px 10px; border-radius: var(--r);
       border: 1px solid var(--border-2); background: transparent;
       color: var(--text-2); cursor: pointer; transition: all 0.1s;
     }
@@ -531,32 +431,19 @@
 
     /* ── Modal ── */
     .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,0.55);
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
       z-index: 200; align-items: center; justify-content: center;
     }
     .modal-overlay.open { display: flex; }
     .modal {
-      background: var(--surface); border: 1px solid var(--border-2);
-      border-radius: var(--r);
-      width: min(90vw, 860px); max-height: 85vh;
-      display: flex; flex-direction: column;
+      background: var(--surface); border: 1px solid var(--border-2); border-radius: var(--r);
+      width: min(90vw, 860px); max-height: 85vh; display: flex; flex-direction: column;
     }
-    .modal-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .modal-header h3 { font-size: 13px; color: var(--text); font-weight: 500; }
-    .modal-close {
-      background: none; border: none; color: var(--text-3);
-      font-size: 15px; cursor: pointer; padding: 2px 6px;
-      border-radius: 4px; line-height: 1; transition: color 0.1s;
-    }
+    .modal-close { background: none; border: none; color: var(--text-3); font-size: 15px; cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1; transition: color 0.1s; }
     .modal-close:hover { color: var(--text); }
-    .modal-body {
-      padding: 20px; overflow-y: auto; flex: 1;
-      font-family: var(--font-sans); font-size: 14px; line-height: 1.7; color: var(--text);
-    }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; font-family: var(--font-sans); font-size: 14px; line-height: 1.7; color: var(--text); }
     .modal-body h1, .modal-body h2, .modal-body h3 { color: var(--text); margin: 1.1em 0 0.4em; }
     .modal-body h1 { font-size: 18px; border-bottom: 1px solid var(--border); padding-bottom: 0.4em; }
     .modal-body h2 { font-size: 15px; color: var(--accent); }
@@ -564,22 +451,13 @@
     .modal-body p { margin: 0.4em 0; }
     .modal-body ul, .modal-body ol { margin: 0.4em 0; padding-left: 1.4em; }
     .modal-body li { margin: 0.2em 0; }
-    .modal-body code {
-      font-family: var(--font-mono); font-size: 12px;
-      background: var(--bg); padding: 1px 5px; border-radius: 3px; color: var(--accent);
-    }
-    .modal-body pre {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-      padding: 14px; margin: 0.6em 0; overflow-x: auto;
-    }
+    .modal-body code { font-family: var(--font-mono); font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+    .modal-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 14px; margin: 0.6em 0; overflow-x: auto; }
     .modal-body pre code { background: none; padding: 0; color: var(--text); font-size: 12px; }
     .modal-body a { color: var(--accent); }
     .modal-body a:hover { text-decoration: underline; }
     .modal-body strong { color: var(--text); }
-    .modal-body blockquote {
-      border-left: 2px solid var(--accent); padding-left: 1em; margin: 0.6em 0;
-      color: var(--text-2); font-style: italic;
-    }
+    .modal-body blockquote { border-left: 2px solid var(--accent); padding-left: 1em; margin: 0.6em 0; color: var(--text-2); font-style: italic; }
     .modal-body hr { border: none; border-top: 1px solid var(--border); margin: 1.2em 0; }
     .modal-body table { border-collapse: collapse; margin: 0.6em 0; width: 100%; }
     .modal-body table th, .modal-body table td { border: 1px solid var(--border); padding: 5px 10px; font-size: 12px; }
@@ -621,16 +499,32 @@
     <nav class="sb-nav">
       <div class="sb-group">
         <div class="sb-group-label">General</div>
-        <a href="/" class="sb-item {% if not profile_name %}active{% endif %}">
+        <a href="/" class="sb-item {% if not profile_name and page_section == 'overview' %}active{% endif %}">
           <span class="sb-item-icon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/>
-              <rect x="14" y="14" width="7" height="7" rx="1"/>
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
             </svg>
           </span>
           <span class="sb-item-label">Overview</span>
+        </a>
+        <a href="/sessions" class="sb-item {% if not profile_name and page_section == 'sessions' %}active{% endif %}">
+          <span class="sb-item-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1" fill="currentColor"/>
+              <circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="sb-item-label">Sessions</span>
+        </a>
+        <a href="/cron" class="sb-item {% if not profile_name and page_section == 'cron' %}active{% endif %}">
+          <span class="sb-item-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/><polyline points="12,6 12,12 15.5,14.5"/>
+            </svg>
+          </span>
+          <span class="sb-item-label">Cron Jobs</span>
         </a>
       </div>
 
@@ -642,22 +536,20 @@
           <span class="sb-profile-dot {% if p.systemd_state == 'active' %}is-active{% endif %}"></span>
           <span class="sb-item-label">{{ p.name }}</span>
         </a>
+        {% if profile_name == p.name %}
+        <a href="/profiles/{{ p.name }}" class="sb-subitem {% if page_section == 'overview' %}active{% endif %}">
+          <span class="sb-item-label">Overview</span>
+        </a>
+        <a href="/profiles/{{ p.name }}/sessions" class="sb-subitem {% if page_section == 'sessions' %}active{% endif %}">
+          <span class="sb-item-label">Sessions</span>
+        </a>
+        <a href="/profiles/{{ p.name }}/cron" class="sb-subitem {% if page_section == 'cron' %}active{% endif %}">
+          <span class="sb-item-label">Cron Jobs</span>
+        </a>
+        {% endif %}
         {% endfor %}
       </div>
       {% endif %}
-
-      <div class="sb-group">
-        <div class="sb-group-label">Jobs</div>
-        <a href="#cron-section" class="sb-item" onclick="scrollToCron(event)">
-          <span class="sb-item-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="9"/>
-              <polyline points="12,6 12,12 15.5,14.5"/>
-            </svg>
-          </span>
-          <span class="sb-item-label">Cron Jobs</span>
-        </a>
-      </div>
     </nav>
 
     <div class="sb-footer">
@@ -676,7 +568,11 @@
           <nav class="breadcrumb">
             <a href="/" class="bc-link">Overview</a>
             <span class="bc-sep">/</span>
-            <span class="bc-current">{{ profile_name }}</span>
+            <a href="/profiles/{{ profile_name }}" class="bc-link">{{ profile_name }}</a>
+            {% if page_section != 'overview' %}
+            <span class="bc-sep">/</span>
+            <span class="bc-current">{{ page_title if page_section != 'overview' else '' }}</span>
+            {% endif %}
           </nav>
           {% endif %}
           <h1 class="page-title">{{ page_title }}</h1>
@@ -685,7 +581,8 @@
         <div class="live-badge"><span class="live-dot"></span>live</div>
       </div>
 
-      <!-- Range bar -->
+      <!-- Range bar (overview + sessions only) -->
+      {% if page_section in ['overview', 'sessions'] %}
       <div class="range-bar">
         <div class="range-presets">
           <button class="range-btn active" data-range="all" onclick="setRange(this,'all')">All time</button>
@@ -700,56 +597,24 @@
           <input type="date" class="date-input" id="customUntil" onchange="setCustomRange()">
         </div>
       </div>
+      {% endif %}
 
-      <!-- KPI row -->
+      <!-- ══ OVERVIEW SECTION ══ -->
+      {% if page_section == 'overview' %}
+
       <div class="kpi-row" id="kpi-container">
         {% include "partials/kpi.html" %}
       </div>
 
-      <!-- Charts + heatmap -->
       <div id="charts-container">
         {% include "partials/charts.html" %}
       </div>
 
-      <!-- Profile status card (profile pages only) -->
-      {% if profile_name and profiles|length > 0 %}
-      {% set p = profiles[0] %}
-      <div class="profile-status-card">
-        <div>
-          <div class="psc-name">{{ profile_name }}</div>
-          {% if page_subtitle %}<div class="psc-sub">{{ page_subtitle }}</div>{% endif %}
-        </div>
-        <div>
-          {% if p.systemd_state == 'active' %}
-            <span class="badge badge-active"><span class="pulse"></span>active</span>
-          {% elif p.systemd_state == 'inactive' %}
-            <span class="badge badge-inactive">inactive</span>
-          {% else %}
-            <span class="badge badge-unknown">{{ p.systemd_state }}</span>
-          {% endif %}
-        </div>
-      </div>
       {% endif %}
 
-      <!-- Profiles table (overview only) -->
-      {% if not profile_name %}
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Profiles</span>
-          <span class="card-count">{{ profiles|length }}</span>
-        </div>
-        <table>
-          <thead>
-            <tr><th>Name</th><th>Model</th><th>Status</th><th>Sessions</th><th>Last Activity</th><th>Cost</th></tr>
-          </thead>
-          <tbody hx-get="/partials/profiles" hx-trigger="every 30s" hx-swap="innerHTML">
-            {% include "partials/profiles.html" %}
-          </tbody>
-        </table>
-      </div>
-      {% endif %}
+      <!-- ══ SESSIONS SECTION ══ -->
+      {% if page_section == 'sessions' %}
 
-      <!-- Sessions table -->
       <div class="card" id="sessions-card">
         <div class="card-header">
           <span class="card-title">Sessions</span>
@@ -796,15 +661,17 @@
         </div>
       </div>
 
-      <!-- Cron section -->
-      <div id="cron-section">
-        {% include "partials/cron.html" %}
-      </div>
+      {% endif %}
+
+      <!-- ══ CRON SECTION ══ -->
+      {% if page_section == 'cron' %}
+      {% include "partials/cron.html" %}
+      {% endif %}
 
     </div>
   </div>
 
-  <!-- Output modal -->
+  <!-- Output modal (always available for cron outputs) -->
   <div class="modal-overlay" id="output-modal" onclick="if(event.target===this)closeOutputModal()">
     <div class="modal">
       <div class="modal-header">
@@ -816,12 +683,14 @@
   </div>
 
   <script>
+    {% if page_section == 'overview' %}
     Chart.defaults.color = '#6b7280';
     Chart.defaults.borderColor = 'rgba(30,32,40,0.9)';
     Chart.defaults.font.family = "'IBM Plex Mono', monospace";
     Chart.defaults.font.size = 11;
+    {% endif %}
 
-    // ── Sidebar toggle (persisted) ──
+    // ── Sidebar toggle ──
     (function() {
       if (localStorage.getItem('sb-collapsed') === '1') document.body.classList.add('sb-collapsed');
       document.getElementById('sbToggle').addEventListener('click', () => {
@@ -829,11 +698,6 @@
         localStorage.setItem('sb-collapsed', document.body.classList.contains('sb-collapsed') ? '1' : '0');
       });
     })();
-
-    function scrollToCron(e) {
-      const el = document.getElementById('cron-section');
-      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    }
 
     // ── Date formatting ──
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -860,14 +724,13 @@
     formatAllDates();
     document.body.addEventListener('htmx:afterSwap', e => formatAllDates(e.detail.target));
 
-    // ── State ──
     const API_PREFIX = '{{ api_prefix }}';
     const PROFILE = '{{ profile_name or "" }}';
+
+    {% if page_section in ['overview', 'sessions'] %}
+    // ── Range state ──
     let currentRange = 'all';
     let customSince = null, customUntil = null;
-    let sessionsOffset = 0;
-    const sessionsLimit = 20;
-    let sessionsTotal = {{ sessions.total }};
 
     function rangeParams() {
       const p = new URLSearchParams();
@@ -885,8 +748,12 @@
       document.getElementById('customUntil').value = '';
       document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
+      {% if page_section == 'sessions' %}
       sessionsOffset = 0;
-      refreshAll();
+      loadSessions();
+      {% else %}
+      refreshCharts();
+      {% endif %}
     }
 
     function setCustomRange() {
@@ -895,16 +762,31 @@
       if (!customSince && !customUntil) return;
       document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
       currentRange = null;
+      {% if page_section == 'sessions' %}
       sessionsOffset = 0;
-      refreshAll();
+      loadSessions();
+      {% else %}
+      refreshCharts();
+      {% endif %}
     }
+    {% endif %}
 
-    function refreshAll() {
+    {% if page_section == 'overview' %}
+    function refreshCharts() {
       const rp = rangeParams();
       htmx.ajax('GET', '/partials/kpi?'+rp, { target:'#kpi-container', swap:'innerHTML' });
       htmx.ajax('GET', '/partials/charts?'+rp, { target:'#charts-container', swap:'innerHTML' });
-      loadSessions();
     }
+    setInterval(() => {
+      htmx.ajax('GET', '/partials/kpi?'+rangeParams(), { target:'#kpi-container', swap:'innerHTML' });
+    }, 30000);
+    {% endif %}
+
+    {% if page_section == 'sessions' %}
+    // ── Sessions ──
+    let sessionsOffset = 0;
+    const sessionsLimit = 20;
+    let sessionsTotal = {{ sessions.total }};
 
     function loadSessions() {
       const source = document.getElementById('filterSource').value;
@@ -938,7 +820,9 @@
       loadSessions();
     }
     updatePagination();
+    {% endif %}
 
+    {% if page_section == 'cron' %}
     // ── Cron outputs ──
     const outputsLoaded = {};
     function toggleOutputs(jobId) {
@@ -995,11 +879,7 @@
       document.getElementById('output-modal').classList.remove('open');
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeOutputModal(); });
-
-    // Auto-refresh KPI every 30s
-    setInterval(() => {
-      htmx.ajax('GET', '/partials/kpi?'+rangeParams(), { target:'#kpi-container', swap:'innerHTML' });
-    }, 30000);
+    {% endif %}
   </script>
 </body>
 </html>

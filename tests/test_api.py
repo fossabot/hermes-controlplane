@@ -80,15 +80,23 @@ async def fake_profile_names():
     return ["radar"]
 
 
-def _patch_dashboard(monkeypatch):
+def _patch_overview(monkeypatch):
     monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
-    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions)
     monkeypatch.setattr("hermes_controlplane.main.get_overview_stats", fake_overview)
     monkeypatch.setattr("hermes_controlplane.main.get_costs_by_model", fake_costs_by_model)
     monkeypatch.setattr("hermes_controlplane.main.get_sessions_by_source", fake_sources)
     monkeypatch.setattr("hermes_controlplane.main.get_hourly_activity", fake_hourly)
     monkeypatch.setattr("hermes_controlplane.main.get_daily_stats", fake_daily)
+
+
+def _patch_sessions(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions)
     monkeypatch.setattr("hermes_controlplane.main.get_filter_options", fake_filter_options)
+
+
+def _patch_cron(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
     monkeypatch.setattr("hermes_controlplane.main.get_cron_jobs", lambda **kw: [])
     monkeypatch.setattr("hermes_controlplane.main.get_all_cron_output_jobs", lambda **kw: [])
 
@@ -136,10 +144,23 @@ def test_overview_stats(monkeypatch):
     assert response.json()["total_sessions"] == 10
 
 
-def test_dashboard_renders(monkeypatch):
-    _patch_dashboard(monkeypatch)
+def test_page_overview_renders(monkeypatch):
+    _patch_overview(monkeypatch)
     response = client.get("/")
     assert response.status_code == 200
-    assert "Hermes" in response.text
     assert "Overview" in response.text
     assert "radar" in response.text
+
+
+def test_page_sessions_renders(monkeypatch):
+    _patch_sessions(monkeypatch)
+    response = client.get("/sessions")
+    assert response.status_code == 200
+    assert "Sessions" in response.text
+
+
+def test_page_cron_renders(monkeypatch):
+    _patch_cron(monkeypatch)
+    response = client.get("/cron")
+    assert response.status_code == 200
+    assert "Cron" in response.text

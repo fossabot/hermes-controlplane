@@ -30,16 +30,16 @@
   </div>
 </div>
 
-<!-- Daily trend -->
+<!-- Daily cost -->
 <div class="charts-grid">
   <div class="chart-card" style="grid-column: 1 / -1;">
-    <div class="chart-title">Daily Trend</div>
-    <div class="chart-wrap"><canvas id="chartDaily"></canvas></div>
+    <div class="chart-title">Daily Cost</div>
+    <div class="chart-wrap"><canvas id="chartDailyCost"></canvas></div>
   </div>
 </div>
 
 <script>
-(function() {
+requestAnimationFrame(function() {
   const C = {
     accent: '#7fa8f5',
     amber:  '#fbbf24',
@@ -96,35 +96,31 @@
   });
 
   const dailyData = {{ daily | tojson }};
-  new Chart(document.getElementById('chartDaily'), {
-    type: 'line',
+  new Chart(document.getElementById('chartDailyCost'), {
+    type: 'bar',
     data: {
       labels: dailyData.map(d => d.date),
-      datasets: [
-        {
-          label: 'Messages', data: dailyData.map(d => d.messages),
-          borderColor: C.accent, backgroundColor: C.accent + '12',
-          fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5,
-          pointBackgroundColor: C.accent, yAxisID: 'y',
-        },
-        {
-          label: 'Cost ($)', data: dailyData.map(d => d.cost_usd),
-          borderColor: C.amber, backgroundColor: C.amber + '12',
-          fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 5,
-          pointBackgroundColor: C.amber, yAxisID: 'y1',
-        }
-      ]
+      datasets: [{
+        label: 'Cost ($)',
+        data: dailyData.map(d => d.cost_usd),
+        backgroundColor: C.amber + '30',
+        borderColor: C.amber,
+        borderWidth: 1,
+        borderRadius: 3,
+        hoverBackgroundColor: C.amber + '55',
+      }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { usePointStyle: true, pointStyle: 'circle', padding: 18 } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `$${ctx.parsed.y.toFixed(4)}` } }
+      },
       scales: {
-        x: { grid: { color: GRID } },
-        y: { position: 'left', grid: { color: GRID }, title: { display: true, text: 'Messages', color: C.accent } },
-        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Cost ($)', color: C.amber }, ticks: { callback: v => `$${v}` } },
+        x: { grid: { display: false } },
+        y: { grid: { color: GRID }, ticks: { callback: v => `$${v}` } }
       }
     }
   });
-})();
+});
 </script>
