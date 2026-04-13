@@ -1,0 +1,18 @@
+[Unit]
+Description=Hermes Control Plane
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=__WORKDIR__
+Environment=HERMES_HOME=__HERMES_HOME__
+Environment=CONTROLPLANE_HOST=__HOST__
+Environment=CONTROLPLANE_PORT=__PORT__
+Environment=CONTROLPLANE_LOG_LEVEL=__LOG_LEVEL__
+Environment=PYTHONUNBUFFERED=1
+ExecStart=__UV_BIN__ run --project __WORKDIR__ uvicorn hermes_controlplane.main:app --host __HOST__ --port __PORT__
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
