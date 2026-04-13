@@ -1,4 +1,4 @@
-"""Hermes Control Plane — FastAPI sidecar (read-only observation mode)."""
+"""Hermes Control Plane — FastAPI sidecar for Hermes observability and cron operations."""
 
 import time
 from pathlib import Path
@@ -33,7 +33,7 @@ from hermes_controlplane.observer import (
 app = FastAPI(
     title="Hermes Control Plane",
     version="0.1.0",
-    description="Read-only observation sidecar for Hermes agent gateway",
+    description="Hermes observability sidecar with cron operations for Hermes",
 )
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))

@@ -20,7 +20,7 @@ What this release does not include:
 
 ## License
 
-MIT. See `LICENSE`.
+MIT. See [LICENSE](LICENSE).
 
 ## Security model
 
@@ -31,7 +31,7 @@ Official posture for v0.1:
 - direct public internet exposure is not recommended
 - no custom auth layer is shipped inside the app
 
-More details: `SECURITY.md`.
+More details: [SECURITY.md](SECURITY.md).
 
 ## Quick start
 
@@ -60,7 +60,7 @@ Then open locally:
 
 ## Manual host-native install
 
-See `docs/install-host-native.md`.
+See [docs/install-host-native.md](docs/install-host-native.md).
 
 Short version:
 
@@ -87,21 +87,21 @@ Advanced option:
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust if needed.
+Copy [.env.example](.env.example) to `.env` and adjust if needed.
 
 Main variables:
-- `HERMES_HOME=/home/your-user/.hermes`
+- `HERMES_HOME=${HOME}/.hermes`
 - `CONTROLPLANE_HOST=127.0.0.1`
 - `CONTROLPLANE_PORT=8780`
 - `CONTROLPLANE_LOG_LEVEL=info`
 
 ## Project docs
 
-- `docs/install-host-native.md`
-- `docs/architecture.md`
-- `docs/cron.md`
-- `CONTRIBUTING.md`
-- `SECURITY.md`
+- [docs/install-host-native.md](docs/install-host-native.md)
+- [docs/architecture.md](docs/architecture.md)
+- [docs/cron.md](docs/cron.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
 
 ## Development
 
@@ -119,4 +119,4 @@ uv run uvicorn hermes_controlplane.main:app --host 127.0.0.1 --port 8780 --reloa
 
 ## Contributing
 
-External contributions are welcome. Start with `CONTRIBUTING.md`.
+External contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
