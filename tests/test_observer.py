@@ -8,7 +8,6 @@ from hermes_controlplane.observer import (
     _has_column,
     _ro_uri,
     get_overview_stats,
-    get_profile_config_raw,
     get_recent_sessions,
     get_session_detail,
     get_session_messages,
@@ -201,39 +200,7 @@ async def test_get_session_messages_empty_for_no_messages(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 4.4 — get_profile_config_raw
-# ---------------------------------------------------------------------------
-
-@pytest.mark.anyio
-async def test_get_profile_config_raw_reads_yaml(tmp_path, monkeypatch):
-    config_content = "model:\n  default: claude-3-5-sonnet\n  provider: anthropic\n"
-    # get_profile_config_raw looks at settings.hermes_home / "profiles" / name / "config.yaml"
-    profile_dir = tmp_path / "profiles" / "myprofile"
-    profile_dir.mkdir(parents=True)
-    (profile_dir / "config.yaml").write_text(config_content)
-
-    from hermes_controlplane.config import Settings
-    fake_settings = Settings(hermes_home=tmp_path)
-    monkeypatch.setattr("hermes_controlplane.observer.settings", fake_settings)
-
-    result = await get_profile_config_raw("myprofile")
-    assert result["exists"] is True
-    assert result["raw_yaml"] == config_content
-
-
-@pytest.mark.anyio
-async def test_get_profile_config_raw_returns_exists_false_when_missing(tmp_path, monkeypatch):
-    from hermes_controlplane.config import Settings
-    fake_settings = Settings(hermes_home=tmp_path)
-    monkeypatch.setattr("hermes_controlplane.observer.settings", fake_settings)
-
-    result = await get_profile_config_raw("nonexistent")
-    assert result["exists"] is False
-    assert result["raw_yaml"] == ""
-
-
-# ---------------------------------------------------------------------------
-# 4.5 — get_overview_stats (new fields)
+# 4.4 — get_overview_stats (new fields)
 # ---------------------------------------------------------------------------
 
 async def _make_overview_db(tmp_path):

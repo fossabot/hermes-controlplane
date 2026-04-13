@@ -644,24 +644,6 @@ async def get_session_messages(
         return []
 
 
-async def get_profile_config_raw(name: str) -> dict[str, Any]:
-    """Return {model, provider, raw_yaml, exists} for a profile's config.yaml."""
-    config_path = settings.hermes_home / "profiles" / name / "config.yaml"
-    if not config_path.exists():
-        return {"model": None, "provider": None, "raw_yaml": "", "exists": False}
-    try:
-        raw_yaml = config_path.read_text()
-        parsed = _parse_model_provider_from_yaml(config_path)
-        return {
-            "model": parsed.get("model"),
-            "provider": parsed.get("provider"),
-            "raw_yaml": raw_yaml,
-            "exists": True,
-        }
-    except Exception:
-        return {"model": None, "provider": None, "raw_yaml": "", "exists": False}
-
-
 async def get_daily_stats(
     *, days: int = 7,
     since: float | None = None, until: float | None = None,

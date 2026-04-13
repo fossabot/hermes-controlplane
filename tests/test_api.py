@@ -123,19 +123,6 @@ async def fake_session_messages(session_id, **kwargs):
     ]
 
 
-async def fake_profile_config_exists(name):
-    return {
-        "model": "claude-3-5-sonnet",
-        "provider": "anthropic",
-        "raw_yaml": "model:\n  default: claude-3-5-sonnet\n  provider: anthropic\n",
-        "exists": True,
-    }
-
-
-async def fake_profile_config_missing(name):
-    return {"model": None, "provider": None, "raw_yaml": "", "exists": False}
-
-
 def _patch_overview(monkeypatch):
     monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
     monkeypatch.setattr("hermes_controlplane.main.get_overview_stats", fake_overview)
@@ -161,7 +148,20 @@ def test_health(monkeypatch):
     monkeypatch.setattr("hermes_controlplane.main.list_profiles", fake_profile_names)
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    data = response.json()
+    assert data == {
+        "status": "ok",
+        "version": "0.1.0",
+        "mode": "observer-first",
+        "profiles_found": 1,
+    }
+    assert "hermes_home" not in data
+    assert "profiles" not in data
+
+
+def test_profile_raw_config_route_removed():
+    response = client.get("/profiles/radar/config")
+    assert response.status_code == 404
 
 
 def test_api_profiles(monkeypatch):
@@ -268,28 +268,7 @@ def test_profile_session_detail_404_for_unknown_session(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# 4.8 — GET /profiles/{name}/config
-# ---------------------------------------------------------------------------
-
-def test_profile_config_200_with_raw_yaml(monkeypatch):
-    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
-    monkeypatch.setattr("hermes_controlplane.main.get_profile_summary", fake_profile)
-    monkeypatch.setattr("hermes_controlplane.main.get_profile_config_raw", fake_profile_config_exists)
-    response = client.get("/profiles/radar/config")
-    assert response.status_code == 200
-    assert "claude-3-5-sonnet" in response.text
-
-
-def test_profile_config_404_when_missing(monkeypatch):
-    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
-    monkeypatch.setattr("hermes_controlplane.main.get_profile_summary", fake_profile)
-    monkeypatch.setattr("hermes_controlplane.main.get_profile_config_raw", fake_profile_config_missing)
-    response = client.get("/profiles/radar/config")
-    assert response.status_code == 404
-
-
-# ---------------------------------------------------------------------------
-# 4.9 — KPI partial includes new fields
+# 4.8 — KPI partial includes new fields
 # ---------------------------------------------------------------------------
 
 def test_kpi_partial_includes_tool_calls(monkeypatch):

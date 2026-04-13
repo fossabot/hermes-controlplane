@@ -22,7 +22,6 @@ from hermes_controlplane.observer import (
     get_filter_options,
     get_hourly_activity,
     get_overview_stats,
-    get_profile_config_raw,
     get_profile_summary,
     get_recent_sessions,
     get_session_detail,
@@ -70,9 +69,9 @@ async def health():
     profiles = await list_profiles()
     return {
         "status": "ok",
-        "hermes_home": str(settings.hermes_home),
+        "version": app.version,
+        "mode": "observer-first",
         "profiles_found": len(profiles),
-        "profiles": profiles,
     }
 
 
@@ -428,8 +427,7 @@ async def page_session_detail(request: Request, session_id: str):
 
 @app.get("/profiles/{name}/sessions/{session_id}", response_class=HTMLResponse)
 async def page_profile_session_detail(request: Request, name: str, session_id: str):
-    profile_dir = settings.profiles_dir / name
-    db = profile_dir / "state.db" if (profile_dir / "state.db").exists() else None
+    db = _resolve_profile_db(name)
     sidebar_profiles = await get_all_profiles()
     summary = await get_profile_summary(name)
     session = await get_session_detail(session_id, db_path=db)
@@ -475,22 +473,6 @@ async def page_profile_cron_output(request: Request, name: str, job_id: str, fil
     return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
 
 
-@app.get("/profiles/{name}/config", response_class=HTMLResponse)
-async def page_profile_config(request: Request, name: str):
-    sidebar_profiles = await get_all_profiles()
-    summary = await get_profile_summary(name)
-    config = await get_profile_config_raw(name)
-    if not config["exists"]:
-        raise HTTPException(status_code=404, detail=f"Config not found for profile '{name}'")
-    ctx = _base_ctx(sidebar_profiles, f"{name} — Config", "config",
-                    profile_name=name,
-                    api_prefix=f"/api/profiles/{name}",
-                    page_subtitle=f"{summary.model or 'unknown model'} via {summary.provider or 'unknown'}",
-                    profiles=[summary.to_dict()])
-    ctx.update(profile_config=config)
-    return templates.TemplateResponse(request=request, name="dashboard.html", context=ctx)
-
-
 # =========================================================================
 # HTMX partials — global & per-profile (api_prefix routes to correct DB)
 # =========================================================================
@@ -509,8 +491,7 @@ async def partial_session_detail(request: Request, session_id: str):
 
 @app.get("/api/profiles/{name}/sessions/{session_id}", response_class=HTMLResponse)
 async def partial_profile_session_detail(request: Request, name: str, session_id: str):
-    profile_dir = settings.profiles_dir / name
-    db = profile_dir / "state.db" if (profile_dir / "state.db").exists() else None
+    db = _resolve_profile_db(name)
     session = await get_session_detail(session_id, db_path=db)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
@@ -518,17 +499,6 @@ async def partial_profile_session_detail(request: Request, name: str, session_id
     return templates.TemplateResponse(
         request=request, name="partials/session_detail.html",
         context={"session": session, "messages": messages},
-    )
-
-
-@app.get("/api/profiles/{name}/config", response_class=HTMLResponse)
-async def partial_profile_config(request: Request, name: str):
-    config = await get_profile_config_raw(name)
-    if not config["exists"]:
-        raise HTTPException(status_code=404, detail=f"Config not found for profile '{name}'")
-    return templates.TemplateResponse(
-        request=request, name="partials/profile_config.html",
-        context={"profile_config": config},
     )
 
 
