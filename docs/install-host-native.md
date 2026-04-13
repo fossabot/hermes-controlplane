@@ -1,12 +1,25 @@
 # Host-native install
 
-This is the official installation path for v0.1.
+This is the official installation path for v0.1 on Linux.
 
 It keeps the app simple:
 - install dependencies with `uv`
 - run on the host
 - manage it with `systemd --user`
 - bind to `127.0.0.1`
+
+## Platform support
+
+Official service-install support:
+- Linux with `systemd --user`
+
+Manual local development support:
+- Linux
+- macOS
+
+Notes:
+- `install.sh` installs and uninstalls a user service on Linux only
+- macOS can run the app manually with `uv run uvicorn ...`, but there is no official launchd installer in v0.1
 
 ## Requirements
 
@@ -29,7 +42,7 @@ Edit `.env` if needed.
 Example values:
 
 ```env
-HERMES_HOME=/home/your-user/.hermes
+HERMES_HOME=${HOME}/.hermes
 CONTROLPLANE_HOST=127.0.0.1
 CONTROLPLANE_PORT=8780
 CONTROLPLANE_LOG_LEVEL=info
@@ -58,10 +71,19 @@ Use the example unit at:
 You can also use:
 
 ```bash
-./install.sh
+./install.sh install
 ```
 
 That script renders and installs a user service automatically.
+
+## 4b. Uninstall the user service
+
+```bash
+./install.sh uninstall
+```
+
+This removes the `systemd --user` service unit and stops the service.
+It does not delete the repository, `.env`, or `.venv`.
 
 ## 5. Remote access with SSH tunnel
 

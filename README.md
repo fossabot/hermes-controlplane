@@ -33,12 +33,27 @@ Official posture for v0.1:
 
 More details: [SECURITY.md](SECURITY.md).
 
+## Platform support
+
+Officially supported in v0.1:
+- Linux
+- `systemd --user`
+- `uv`
+
+Also works for manual local development on:
+- macOS
+
+Current installer scope:
+- `./install.sh install` is Linux-only because it installs a `systemd --user` service
+- `./install.sh uninstall` is also Linux-only for the same reason
+- on macOS, use the manual run instructions instead of the service installer
+
 ## Quick start
 
 Requirements:
 - Python 3.11+
 - `uv`
-- `systemd --user`
+- `systemd --user` for the official service install path
 - local access to a Hermes home directory
 
 Fast path:
@@ -46,7 +61,7 @@ Fast path:
 ```bash
 git clone <your-fork-or-local-copy>
 cd hermes-controlplane
-./install.sh
+./install.sh install
 ```
 
 The installer:
@@ -54,6 +69,12 @@ The installer:
 - runs `uv sync`
 - installs a user service
 - starts `hermes-controlplane.service`
+
+To uninstall the service later:
+
+```bash
+./install.sh uninstall
+```
 
 Then open locally:
 - `http://127.0.0.1:8780`

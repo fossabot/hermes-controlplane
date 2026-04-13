@@ -18,6 +18,9 @@ Out of scope for v0.1:
 
 ## Development setup
 
+Linux and macOS are both fine for local development.
+The official service installer is Linux-only because it depends on `systemd --user`.
+
 ```bash
 uv sync
 cp .env.example .env
