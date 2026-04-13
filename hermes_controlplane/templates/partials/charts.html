@@ -30,11 +30,15 @@
   </div>
 </div>
 
-<!-- Daily cost -->
+<!-- Daily activity: mixed bar (cost) + lines (sessions, messages) -->
 <div class="charts-grid">
   <div class="chart-card" style="grid-column: 1 / -1;">
-    <div class="chart-title">Daily Cost</div>
+    <div class="chart-title">Daily Activity</div>
+    {% if daily %}
     <div class="chart-wrap"><canvas id="chartDailyCost"></canvas></div>
+    {% else %}
+    <div class="chart-empty">No activity data for the selected period.</div>
+    {% endif %}
   </div>
 </div>
 
@@ -96,31 +100,69 @@ requestAnimationFrame(function() {
   });
 
   const dailyData = {{ daily | tojson }};
-  new Chart(document.getElementById('chartDailyCost'), {
-    type: 'bar',
-    data: {
-      labels: dailyData.map(d => d.date),
-      datasets: [{
-        label: 'Cost ($)',
-        data: dailyData.map(d => d.cost_usd),
-        backgroundColor: C.amber + '30',
-        borderColor: C.amber,
-        borderWidth: 1,
-        borderRadius: 3,
-        hoverBackgroundColor: C.amber + '55',
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => `$${ctx.parsed.y.toFixed(4)}` } }
+  if (dailyData.length > 0 && document.getElementById('chartDailyCost')) {
+    new Chart(document.getElementById('chartDailyCost'), {
+      data: {
+        labels: dailyData.map(d => d.date),
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Cost ($)',
+            data: dailyData.map(d => d.cost_usd),
+            backgroundColor: C.amber + '30',
+            borderColor: C.amber,
+            borderWidth: 1,
+            borderRadius: 3,
+            hoverBackgroundColor: C.amber + '55',
+            yAxisID: 'yCost',
+          },
+          {
+            type: 'line',
+            label: 'Sessions',
+            data: dailyData.map(d => d.sessions),
+            borderColor: C.accent,
+            backgroundColor: C.accent + '15',
+            borderWidth: 2,
+            pointRadius: 3,
+            tension: 0.3,
+            yAxisID: 'yCounts',
+          },
+          {
+            type: 'line',
+            label: 'Messages',
+            data: dailyData.map(d => d.messages),
+            borderColor: C.green,
+            backgroundColor: C.green + '15',
+            borderWidth: 2,
+            pointRadius: 3,
+            tension: 0.3,
+            yAxisID: 'yCounts',
+          }
+        ]
       },
-      scales: {
-        x: { grid: { display: false } },
-        y: { grid: { color: GRID }, ticks: { callback: v => `$${v}` } }
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { padding: 14, usePointStyle: true, pointStyle: 'circle' } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          yCost: {
+            type: 'linear',
+            position: 'left',
+            grid: { color: GRID },
+            ticks: { callback: v => `$${v}` }
+          },
+          yCounts: {
+            type: 'linear',
+            position: 'right',
+            grid: { display: false },
+            ticks: { stepSize: 1 }
+          }
+        }
       }
-    }
-  });
+    });
+  }
 });
 </script>

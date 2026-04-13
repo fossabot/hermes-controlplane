@@ -1,0 +1,27 @@
+<!-- Profile config summary -->
+<div class="card" style="margin-bottom: 20px;">
+  <div class="card-header">
+    <span class="card-title">Profile Configuration</span>
+  </div>
+  <div class="sd-meta-grid" style="padding: 16px 20px;">
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Model</div>
+      <div class="sd-meta-value model-name">{{ profile_config.model or "—" }}</div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Provider</div>
+      <div class="sd-meta-value mono">{{ profile_config.provider or "—" }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Raw YAML -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">config.yaml</span>
+    <span class="card-count dim">read-only</span>
+  </div>
+  <div style="padding: 16px 20px;">
+    <pre class="config-raw"><code>{{ profile_config.raw_yaml }}</code></pre>
+  </div>
+</div>

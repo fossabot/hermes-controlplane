@@ -1,3 +1,22 @@
+{% set any_running = cron_jobs | selectattr('state', 'equalto', 'running') | list | length > 0 %}
+{% set refresh_url = '/partials/cron' + ('?profile=' + profile_name if profile_name else '') %}
+{% set action_base = '/partials/cron/profiles/' + profile_name + '/jobs' if profile_name else '/partials/cron/jobs' %}
+
+<div id="cron-section"
+  {% if any_running %}
+  hx-get="{{ refresh_url }}"
+  hx-trigger="every 10s"
+  hx-target="#cron-section"
+  hx-swap="innerHTML"
+  {% endif %}
+>
+
+{% if action_error %}
+<div class="cron-error-banner">
+  <span style="color:var(--red);">&#9888;</span> Action failed: {{ action_error }}
+</div>
+{% endif %}
+
 {% if cron_jobs %}
 <!-- Active Cron Jobs -->
 <div class="table-card">
@@ -9,56 +28,148 @@
     <thead>
       <tr>
         <th>Name</th><th>Schedule</th><th>State</th><th>Runs</th>
-        <th>Last Run</th><th>Status</th><th>Next Run</th><th>Deliver</th><th>Outputs</th>
+        <th>Last Run</th><th>Status</th><th>Next Run</th><th>Deliver</th><th>Outputs</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for j in cron_jobs %}
-      <tr>
+      <tr class="{% if j["state"] == 'running' %}state-running-pulse{% endif %}">
         <td>
-          <div class="cron-name">{{ j.name }}</div>
-          <div class="cron-id mono dim">{{ j.id }}</div>
-        </td>
-        <td class="mono">{{ j.schedule_display }}</td>
-        <td>
-          {% if j.enabled and j.state == 'scheduled' %}
-            <span class="badge badge-active"><span class="pulse"></span>scheduled</span>
-          {% elif j.state == 'paused' or not j.enabled %}
-            <span class="badge badge-unknown">paused</span>
-          {% elif j.state == 'running' %}
-            <span class="badge badge-active"><span class="pulse"></span>running</span>
-          {% elif j.state == 'completed' %}
-            <span class="badge" style="background:rgba(96,165,250,0.12);color:var(--blue);">completed</span>
-          {% else %}
-            <span class="badge badge-unknown">{{ j.state }}</span>
+          <div class="cron-name">{{ j["name"] }}</div>
+          <div class="cron-id mono dim">{{ j["id"] }}</div>
+          {% if j["paused_reason"] and j["state"] == 'paused' %}
+          <div class="cron-id dim" style="font-size:10px;color:var(--amber);">{{ j["paused_reason"] }}</div>
           {% endif %}
         </td>
-        <td class="mono">{{ j.repeat_completed }}{% if j.repeat_times %}/{{ j.repeat_times }}{% endif %}</td>
-        <td class="mono dim">{% if j.last_run_at %}<time data-ts="{{ j.last_run_at }}">{{ j.last_run_at[:19] }}</time>{% else %}—{% endif %}</td>
+        <td class="mono">{{ j["schedule_display"] }}</td>
         <td>
-          {% if j.last_status == 'ok' %}
+          {% if j["enabled"] and j["state"] == 'scheduled' %}
+            <span class="badge badge-active"><span class="pulse"></span>scheduled</span>
+          {% elif j["state"] == 'paused' or not j["enabled"] %}
+            <span class="badge badge-unknown">paused</span>
+          {% elif j["state"] == 'running' %}
+            <span class="badge badge-active"><span class="pulse"></span>running</span>
+          {% elif j["state"] == 'completed' %}
+            <span class="badge" style="background:rgba(96,165,250,0.12);color:var(--blue);">completed</span>
+          {% else %}
+            <span class="badge badge-unknown">{{ j["state"] }}</span>
+          {% endif %}
+        </td>
+        <td class="mono">{{ j["repeat_completed"] }}{% if j["repeat_times"] %}/{{ j["repeat_times"] }}{% endif %}</td>
+        <td class="mono dim">{% if j["last_run_at"] %}<time data-ts="{{ j["last_run_at"] }}">{{ j["last_run_at"][:19] }}</time>{% else %}—{% endif %}</td>
+        <td>
+          {% if j["last_status"] == 'ok' %}
             <span style="color:var(--green);">ok</span>
-          {% elif j.last_status == 'error' %}
-            <span style="color:var(--red);" title="{{ j.last_error or '' }}">error</span>
-          {% elif j.last_status %}
-            <span class="dim">{{ j.last_status }}</span>
+          {% elif j["last_status"] == 'error' %}
+            <span style="color:var(--red);" title="{{ j["last_error"] or '' }}">error</span>
+          {% elif j["last_status"] %}
+            <span class="dim">{{ j["last_status"] }}</span>
           {% else %}
             <span class="dim">—</span>
           {% endif %}
+          {% if j["last_error"] %}
+          <div class="cron-error-inline" title="{{ j["last_error"] }}">{{ j["last_error"][:60] }}{% if j["last_error"]|length > 60 %}…{% endif %}</div>
+          {% endif %}
+          {% if j["last_delivery_error"] %}
+          <div class="cron-error-inline" style="color:var(--amber);" title="{{ j["last_delivery_error"] }}">delivery: {{ j["last_delivery_error"][:50] }}…</div>
+          {% endif %}
         </td>
-        <td class="mono dim">{% if j.next_run_at %}<time data-ts="{{ j.next_run_at }}">{{ j.next_run_at[:19] }}</time>{% else %}—{% endif %}</td>
-        <td><span class="source-badge source-{{ j.deliver or 'cli' }}">{{ j.deliver or '—' }}</span></td>
+        <td class="mono dim">{% if j["next_run_at"] %}<time data-ts="{{ j["next_run_at"] }}">{{ j["next_run_at"][:19] }}</time>{% else %}—{% endif %}</td>
+        <td><span class="source-badge source-{{ j["deliver"] or 'cli' }}">{{ j["deliver"] or '—' }}</span></td>
         <td>
-          {% if j.output_count > 0 %}
-            <button class="page-btn" onclick="toggleOutputs('{{ j.id }}')">{{ j.output_count }} runs</button>
+          {% if j["output_count"] > 0 %}
+            <button class="page-btn" onclick="toggleOutputs('{{ j["id"] }}')">{{ j["output_count"] }} runs</button>
           {% else %}
             <span class="dim">0</span>
           {% endif %}
         </td>
+        <td class="cron-actions">
+          {# Run Now — disabled when running #}
+          <button
+            class="page-btn cron-btn-run"
+            {% if j["state"] == 'running' %}disabled title="Job is running"{% endif %}
+            hx-post="{{ action_base }}/{{ j["id"] }}/run"
+            hx-target="#cron-section"
+            hx-swap="innerHTML"
+            hx-confirm="Run job '{{ j["name"] }}' now?"
+            hx-disable-elt="this"
+          >Run Now</button>
+          {# Pause — shown when scheduled/enabled, hidden when paused or running #}
+          {% if j["state"] not in ('paused', 'running', 'completed') %}
+          <button
+            class="page-btn cron-btn-pause"
+            hx-post="{{ action_base }}/{{ j["id"] }}/pause"
+            hx-target="#cron-section"
+            hx-swap="innerHTML"
+            hx-confirm="Pause job '{{ j["name"] }}'?"
+            hx-disable-elt="this"
+          >Pause</button>
+          {% endif %}
+          {# Resume — shown only when paused #}
+          {% if j["state"] == 'paused' %}
+          <button
+            class="page-btn cron-btn-resume"
+            hx-post="{{ action_base }}/{{ j["id"] }}/resume"
+            hx-target="#cron-section"
+            hx-swap="innerHTML"
+            hx-confirm="Resume job '{{ j["name"] }}'?"
+            hx-disable-elt="this"
+          >Resume</button>
+          {% endif %}
+        </td>
       </tr>
-      <tr class="output-row" id="outputs-{{ j.id }}" style="display:none;">
-        <td colspan="9" style="padding:0;">
-          <div class="output-list" id="output-list-{{ j.id }}">
+
+      {# Status dots + run history — spans full width with proper indent #}
+      {% if j["run_history"] %}
+      <tr class="output-row history-meta-row">
+        <td colspan="10">
+          <div class="history-meta-wrap">
+            <div class="status-dots-wrap">
+              {% for run in j["run_history"] %}
+              <span
+                class="cron-dot cron-dot-{{ run["status_hint"] }}"
+                title="{% if run["run_ts"] %}{{ run["run_ts"][:19] }} | {% endif %}{{ run["size_kb"] }}KB | {{ run["status_hint"] }}"
+              ></span>
+              {% endfor %}
+            </div>
+            <details class="history-details">
+              <summary>Run History (last {{ j["run_history"]|length }})</summary>
+              <table class="history-table">
+                <thead>
+                  <tr><th>Run Time</th><th>Size</th><th>Status</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {% for run in j["run_history"] %}
+                  <tr>
+                    <td>{% if run["run_ts"] %}<time data-ts="{{ run["run_ts"] }}">{{ run["run_ts"][:19] }}</time>{% else %}—{% endif %}</td>
+                    <td class="mono">{{ run["size_kb"] }}KB</td>
+                    <td>
+                      {% if run["status_hint"] == 'ok' %}
+                        <span class="run-status run-ok">ok</span>
+                      {% elif run["status_hint"] == 'error' %}
+                        <span class="run-status run-error">error</span>
+                      {% elif run["status_hint"] == 'warn' %}
+                        <span class="run-status run-warn">warn</span>
+                      {% else %}
+                        <span class="run-status">{{ run["status_hint"] }}</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      <a href="/{% if profile_name %}profiles/{{ profile_name }}/{% endif %}cron/outputs/{{ j["id"] }}/{{ run["filename"] }}" class="run-view-btn">View</a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </details>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+
+      <tr class="output-row" id="outputs-{{ j["id"] }}" style="display:none;">
+        <td colspan="10" style="padding:0;">
+          <div class="output-list" id="output-list-{{ j["id"] }}">
             <div class="dim" style="padding:1rem 1.5rem; font-size:0.75rem;">Loading outputs...</div>
           </div>
         </td>
@@ -70,45 +181,83 @@
 {% endif %}
 
 {% if cron_output_jobs %}
-<!-- Archived cron outputs (jobs no longer active but outputs exist) -->
 {% set active_ids = cron_jobs|map(attribute='id')|list %}
 {% set archived = [] %}
 {% for oj in cron_output_jobs %}
-  {% if oj.job_id not in active_ids %}
-    {% if archived.append(oj) %}{% endif %}
-  {% endif %}
+  {% if oj["job_id"] not in active_ids %}{% if archived.append(oj) %}{% endif %}{% endif %}
 {% endfor %}
 {% if archived %}
 <div class="table-card">
   <div class="section-header">
     <span class="section-title">Archived Cron Outputs</span>
-    <span class="section-count">{{ archived|length }} jobs</span>
+    <span class="section-count">{{ archived|length }}</span>
   </div>
   <table>
     <thead>
-      <tr><th>Job ID</th><th>Outputs</th><th>Latest</th><th>Size</th><th></th></tr>
+      <tr>
+        <th>Job ID</th><th>Runs</th><th>Last Run</th><th>Status</th>
+      </tr>
     </thead>
     <tbody>
       {% for oj in archived %}
       <tr>
-        <td class="mono">{{ oj.job_id }}</td>
-        <td class="mono">{{ oj.output_count }}</td>
-        <td class="mono dim"><time data-ts="{{ oj.latest_timestamp }}">{{ oj.latest_timestamp }}</time></td>
-        <td class="mono dim">{{ (oj.latest_size_bytes / 1024)|round(1) }}KB</td>
+        <td class="mono" style="color:var(--text-2);">{{ oj["job_id"] }}</td>
+        <td class="mono">{{ oj["output_count"] }}</td>
+        <td class="mono dim">
+          {% if oj["latest_timestamp"] %}
+            <time data-ts="{{ oj["latest_timestamp"] }}">{{ oj["latest_timestamp"][:19] }}</time>
+          {% else %}—{% endif %}
+        </td>
         <td>
-          <button class="page-btn" onclick="toggleOutputs('{{ oj.job_id }}')">View</button>
+          {% if oj["run_history"] %}
+            {% set last = oj["run_history"][0] %}
+            {% if last["status_hint"] == 'ok' %}<span class="run-status run-ok">ok</span>
+            {% elif last["status_hint"] == 'error' %}<span class="run-status run-error">error</span>
+            {% elif last["status_hint"] == 'warn' %}<span class="run-status run-warn">warn</span>
+            {% else %}<span class="run-status">{{ last["status_hint"] }}</span>{% endif %}
+          {% else %}<span class="dim">—</span>{% endif %}
         </td>
       </tr>
-      <tr class="output-row" id="outputs-{{ oj.job_id }}" style="display:none;">
-        <td colspan="5" style="padding:0;">
-          <div class="output-list" id="output-list-{{ oj.job_id }}">
-            <div class="dim" style="padding:1rem 1.5rem; font-size:0.75rem;">Loading outputs...</div>
+      {% if oj["run_history"] %}
+      <tr class="output-row history-meta-row">
+        <td colspan="4">
+          <div class="history-meta-wrap">
+            <div class="status-dots-wrap">
+              {% for run in oj["run_history"] %}
+              <span class="cron-dot cron-dot-{{ run["status_hint"] }}"
+                title="{% if run["run_ts"] %}{{ run["run_ts"][:19] }} | {% endif %}{{ run["size_kb"] }}KB | {{ run["status_hint"] }}"></span>
+              {% endfor %}
+            </div>
+            <details class="history-details">
+              <summary>Run History (last {{ oj["run_history"]|length }})</summary>
+              <table class="history-table">
+                <thead><tr><th>Run Time</th><th>Size</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  {% for run in oj["run_history"] %}
+                  <tr>
+                    <td>{% if run["run_ts"] %}<time data-ts="{{ run["run_ts"] }}">{{ run["run_ts"][:19] }}</time>{% else %}—{% endif %}</td>
+                    <td class="mono">{{ run["size_kb"] }}KB</td>
+                    <td>
+                      {% if run["status_hint"] == 'ok' %}<span class="run-status run-ok">ok</span>
+                      {% elif run["status_hint"] == 'error' %}<span class="run-status run-error">error</span>
+                      {% elif run["status_hint"] == 'warn' %}<span class="run-status run-warn">warn</span>
+                      {% else %}<span class="run-status">{{ run["status_hint"] }}</span>{% endif %}
+                    </td>
+                    <td><a href="/{% if profile_name %}profiles/{{ profile_name }}/{% endif %}cron/outputs/{{ oj["job_id"] }}/{{ run["filename"] }}" class="run-view-btn">View</a></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </details>
           </div>
         </td>
       </tr>
+      {% endif %}
       {% endfor %}
     </tbody>
   </table>
 </div>
 {% endif %}
 {% endif %}
+
+</div>{# end #cron-section #}

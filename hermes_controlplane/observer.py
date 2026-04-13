@@ -146,6 +146,12 @@ def _ro_uri(db_path: Path) -> str:
     return f"file:{db_path}?mode=ro"
 
 
+async def _has_column(db: aiosqlite.Connection, table: str, column: str) -> bool:
+    """Check if a column exists in a table via PRAGMA table_info."""
+    rows = await (await db.execute(f"PRAGMA table_info({table})")).fetchall()
+    return any(row[1] == column for row in rows)
+
+
 def _time_filter_clause(
     since: float | None, until: float | None,
     col: str = "started_at",
@@ -275,6 +281,21 @@ async def get_recent_sessions(
             if not await cur.fetchone():
                 return empty
 
+            # Check optional columns
+            has_cache_write = await _has_column(db, "sessions", "cache_write_tokens")
+            has_auto_reset = await _has_column(db, "sessions", "was_auto_reset")
+
+            cache_write_expr = (
+                "COALESCE(cache_write_tokens, 0)"
+                if has_cache_write
+                else "0"
+            )
+            auto_reset_expr = (
+                "CASE WHEN was_auto_reset = 1 THEN 1 ELSE 0 END, auto_reset_reason"
+                if has_auto_reset
+                else "0, NULL"
+            )
+
             where_parts: list[str] = []
             params: list[Any] = []
             if source:
@@ -302,14 +323,22 @@ async def get_recent_sessions(
                 f"COALESCE(message_count, 0), COALESCE(tool_call_count, 0), "
                 f"COALESCE(input_tokens, 0), COALESCE(output_tokens, 0), "
                 f"COALESCE(cache_read_tokens, 0), COALESCE(reasoning_tokens, 0), "
-                f"COALESCE(actual_cost_usd, estimated_cost_usd, 0), cost_status, title "
+                f"COALESCE(actual_cost_usd, estimated_cost_usd, 0), cost_status, title, "
+                f"CASE WHEN ended_at IS NOT NULL THEN CAST(ended_at - started_at AS INTEGER) ELSE NULL END, "
+                f"{cache_write_expr}, "
+                f"{auto_reset_expr}, "
+                f"CASE WHEN ended_at IS NULL "
+                f"  AND (strftime('%s','now') - started_at) > 1800 "
+                f"  AND (SELECT finish_reason FROM messages WHERE session_id = sessions.id ORDER BY timestamp DESC LIMIT 1) = 'stop' "
+                f"THEN 1 ELSE 0 END as is_stale "
                 f"FROM sessions {where_sql} "
                 f"ORDER BY started_at DESC LIMIT ? OFFSET ?",
                 [*params, min(limit, 100), offset],
             )).fetchall()
 
-            items = [
-                SessionInfo(
+            items = []
+            for r in rows:
+                base = SessionInfo(
                     id=r[0], source=r[1], model=r[2],
                     started_at=_ts_to_iso(r[3]), ended_at=_ts_to_iso(r[4]),
                     message_count=r[5], tool_call_count=r[6],
@@ -317,8 +346,13 @@ async def get_recent_sessions(
                     cache_read_tokens=r[9], reasoning_tokens=r[10],
                     estimated_cost_usd=r[11], cost_status=r[12], title=r[13],
                 ).to_dict()
-                for r in rows
-            ]
+                base["duration_seconds"] = r[14]
+                base["cache_write_tokens"] = r[15]
+                base["was_auto_reset"] = bool(r[16])
+                base["auto_reset_reason"] = r[17]
+                base["is_stale"] = bool(r[18])
+                items.append(base)
+
             return {"items": items, "total": total, "limit": limit, "offset": offset}
     except Exception:
         return empty
@@ -352,6 +386,8 @@ async def get_overview_stats(
         "total_input_tokens": 0, "total_output_tokens": 0,
         "total_cache_read_tokens": 0, "total_reasoning_tokens": 0,
         "active_sessions": 0, "distinct_models": 0, "distinct_sources": 0,
+        "total_tool_calls": 0, "avg_duration_seconds": None,
+        "total_cache_write_tokens": 0, "cache_efficiency_ratio": None,
     }
     if not target.exists():
         return defaults
@@ -363,6 +399,15 @@ async def get_overview_stats(
             if not await cur.fetchone():
                 return defaults
             where_clause, params = _time_filter_clause(since, until)
+
+            # Check optional columns
+            has_cache_write = await _has_column(db, "sessions", "cache_write_tokens")
+            cache_write_expr = (
+                "COALESCE(SUM(COALESCE(cache_write_tokens, 0)), 0)"
+                if has_cache_write
+                else "0"
+            )
+
             row = await (await db.execute(
                 f"SELECT COUNT(*), "
                 f"COALESCE(SUM(COALESCE(message_count, 0)), 0), "
@@ -373,22 +418,34 @@ async def get_overview_stats(
                 f"COALESCE(SUM(COALESCE(reasoning_tokens, 0)), 0), "
                 f"SUM(CASE WHEN ended_at IS NULL THEN 1 ELSE 0 END), "
                 f"COUNT(DISTINCT model), "
-                f"COUNT(DISTINCT source) "
+                f"COUNT(DISTINCT source), "
+                f"COALESCE(SUM(COALESCE(tool_call_count, 0)), 0), "
+                f"AVG(CASE WHEN ended_at IS NOT NULL THEN ended_at - started_at ELSE NULL END), "
+                f"{cache_write_expr} "
                 f"FROM sessions {where_clause}",
                 params,
             )).fetchone()
             if row:
+                total_cache_read = row[5] or 0
+                total_input = row[3] or 0
+                denom = total_cache_read + total_input
+                cache_ratio = (total_cache_read / denom) if denom > 0 else None
+
                 return {
                     "total_sessions": row[0],
                     "total_messages": row[1],
                     "total_cost_usd": round(row[2], 4),
-                    "total_input_tokens": row[3],
+                    "total_input_tokens": total_input,
                     "total_output_tokens": row[4],
-                    "total_cache_read_tokens": row[5],
+                    "total_cache_read_tokens": total_cache_read,
                     "total_reasoning_tokens": row[6],
                     "active_sessions": row[7],
                     "distinct_models": row[8],
                     "distinct_sources": row[9],
+                    "total_tool_calls": row[10],
+                    "avg_duration_seconds": row[11],
+                    "total_cache_write_tokens": row[12] or 0,
+                    "cache_efficiency_ratio": cache_ratio,
                 }
             return defaults
     except Exception:
@@ -475,6 +532,134 @@ async def get_hourly_activity(
             return [{"hour": h, "messages": hour_map.get(h, 0)} for h in range(24)]
     except Exception:
         return zeros
+
+
+async def get_session_detail(
+    session_id: str, *, db_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Return full session row as dict, or None if not found.
+
+    Includes duration_seconds, was_auto_reset, auto_reset_reason, cache_write_tokens.
+    Gracefully handles missing optional columns via _has_column().
+    """
+    target = db_path or settings.global_state_db
+    if not target.exists():
+        return None
+    try:
+        async with aiosqlite.connect(_ro_uri(target), uri=True) as db:
+            db.row_factory = aiosqlite.Row
+            has_cache_write = await _has_column(db, "sessions", "cache_write_tokens")
+            has_auto_reset = await _has_column(db, "sessions", "was_auto_reset")
+
+            extra_cols = ""
+            if has_cache_write:
+                extra_cols += ", COALESCE(cache_write_tokens, 0) as cache_write_tokens"
+            else:
+                extra_cols += ", 0 as cache_write_tokens"
+
+            if has_auto_reset:
+                extra_cols += (
+                    ", CASE WHEN was_auto_reset = 1 THEN 1 ELSE 0 END as was_auto_reset"
+                    ", auto_reset_reason"
+                )
+            else:
+                extra_cols += ", 0 as was_auto_reset, NULL as auto_reset_reason"
+
+            row = await (await db.execute(
+                f"SELECT id, source, model, started_at, ended_at, "
+                f"COALESCE(message_count, 0), COALESCE(tool_call_count, 0), "
+                f"COALESCE(input_tokens, 0), COALESCE(output_tokens, 0), "
+                f"COALESCE(cache_read_tokens, 0), COALESCE(reasoning_tokens, 0), "
+                f"COALESCE(actual_cost_usd, estimated_cost_usd, 0), cost_status, title"
+                f"{extra_cols}, "
+                f"CASE WHEN ended_at IS NULL "
+                f"  AND (strftime('%s','now') - started_at) > 1800 "
+                f"  AND (SELECT finish_reason FROM messages WHERE session_id = sessions.id ORDER BY timestamp DESC LIMIT 1) = 'stop' "
+                f"THEN 1 ELSE 0 END as is_stale "
+                f"FROM sessions WHERE id = ?",
+                [session_id],
+            )).fetchone()
+
+            if row is None:
+                return None
+
+            duration_seconds: int | None = None
+            if row["ended_at"] is not None and row["started_at"] is not None:
+                duration_seconds = int(row["ended_at"] - row["started_at"])
+
+            return {
+                "id": row["id"],
+                "source": row["source"],
+                "model": row["model"],
+                "started_at": _ts_to_iso(row["started_at"]),
+                "ended_at": _ts_to_iso(row["ended_at"]),
+                "message_count": row[5],
+                "tool_call_count": row[6],
+                "input_tokens": row[7],
+                "output_tokens": row[8],
+                "cache_read_tokens": row[9],
+                "reasoning_tokens": row[10],
+                "estimated_cost_usd": round(row[11], 6),
+                "cost_status": row["cost_status"],
+                "title": row["title"],
+                "cache_write_tokens": row["cache_write_tokens"],
+                "was_auto_reset": bool(row["was_auto_reset"]),
+                "auto_reset_reason": row["auto_reset_reason"],
+                "duration_seconds": duration_seconds,
+                "is_stale": bool(row["is_stale"]),
+            }
+    except Exception:
+        return None
+
+
+async def get_session_messages(
+    session_id: str, *, limit: int = 200, db_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Return messages for a session ordered by created_at ASC, capped at limit."""
+    target = db_path or settings.global_state_db
+    if not target.exists():
+        return []
+    try:
+        async with aiosqlite.connect(_ro_uri(target), uri=True) as db:
+            cur = await db.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='messages'"
+            )
+            if not await cur.fetchone():
+                return []
+            rows = await (await db.execute(
+                "SELECT id, role, content, timestamp, tool_call_id, tool_calls, tool_name, finish_reason "
+                "FROM messages WHERE session_id = ? ORDER BY timestamp ASC LIMIT ?",
+                [session_id, limit],
+            )).fetchall()
+            return [
+                {
+                    "id": r[0], "role": r[1], "content": r[2],
+                    "created_at": _ts_to_iso(r[3]),
+                    "tool_call_id": r[4], "tool_calls": r[5],
+                    "tool_name": r[6], "finish_reason": r[7],
+                }
+                for r in rows
+            ]
+    except Exception:
+        return []
+
+
+async def get_profile_config_raw(name: str) -> dict[str, Any]:
+    """Return {model, provider, raw_yaml, exists} for a profile's config.yaml."""
+    config_path = settings.hermes_home / "profiles" / name / "config.yaml"
+    if not config_path.exists():
+        return {"model": None, "provider": None, "raw_yaml": "", "exists": False}
+    try:
+        raw_yaml = config_path.read_text()
+        parsed = _parse_model_provider_from_yaml(config_path)
+        return {
+            "model": parsed.get("model"),
+            "provider": parsed.get("provider"),
+            "raw_yaml": raw_yaml,
+            "exists": True,
+        }
+    except Exception:
+        return {"model": None, "provider": None, "raw_yaml": "", "exists": False}
 
 
 async def get_daily_stats(

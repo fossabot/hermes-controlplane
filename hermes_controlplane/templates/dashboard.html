@@ -183,7 +183,7 @@
     }
     body.sb-collapsed .main { margin-left: var(--swc); }
 
-    .content { max-width: 1200px; margin: 0 auto; padding: 28px 32px 56px; }
+    .content { max-width: 1600px; margin: 0 auto; padding: 28px 20px 56px; }
 
     /* ── Page header ── */
     .page-head {
@@ -345,7 +345,7 @@
 
     /* ── Tables ── */
     table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 9px 20px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
     th {
       background: var(--surface-2); color: var(--text-2);
       font-weight: 500; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em;
@@ -365,6 +365,7 @@
     .badge-active { background: var(--green-dim); color: var(--green); }
     .badge-inactive { background: var(--red-dim); color: var(--red); }
     .badge-unknown { background: var(--amber-dim); color: var(--amber); }
+    .badge-stale { background: rgba(100,100,120,0.15); color: var(--text-3); }
     .pulse { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse-dot 2s ease-in-out infinite; }
     .source-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 11px; }
     .source-telegram { background: rgba(34,211,238,0.1); color: var(--cyan); }
@@ -413,6 +414,80 @@
     .cron-id { font-size: 10px; color: var(--text-3); font-family: var(--font-mono); margin-top: 2px; }
     .output-row:hover td { background: transparent !important; }
     .output-list { background: var(--bg); border-top: 1px solid var(--border); }
+
+    /* Cron action buttons */
+    .cron-actions { white-space: nowrap; }
+    .cron-actions .page-btn { margin-right: 4px; }
+    .cron-btn-pause { color: var(--amber) !important; }
+    .cron-btn-resume { color: var(--green) !important; }
+    .cron-error-banner {
+      background: var(--red-dim); border: 1px solid var(--red); border-radius: var(--r);
+      padding: 8px 14px; margin-bottom: 12px; font-size: 13px; color: var(--red);
+    }
+    .cron-error-inline { font-size: 10px; color: var(--red); margin-top: 2px; }
+
+    /* Status dots */
+    .status-dots-wrap { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .cron-dot {
+      display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+      cursor: default; flex-shrink: 0;
+    }
+    .cron-dot-ok      { background: #34d399; }
+    .cron-dot-error   { background: #f87171; }
+    .cron-dot-warn    { background: #fbbf24; }
+    .cron-dot-running { background: #7fa8f5; animation: cron-dot-pulse 1s ease-in-out infinite; }
+    .cron-dot-unknown { background: var(--text-3); }
+    @keyframes cron-dot-pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    .history-meta-row td { padding: 0 !important; background: transparent !important; }
+    .history-meta-wrap { padding: 6px 16px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .history-details > summary { font-size: 11px; color: var(--text-3); cursor: pointer; padding: 2px 0; list-style: none; display: flex; align-items: center; gap: 6px; user-select: none; }
+    .history-details > summary::before { content: '▶'; font-size: 8px; transition: transform 0.15s; }
+    .history-details[open] > summary::before { transform: rotate(90deg); }
+    .history-details > summary:hover { color: var(--text-2); }
+
+    /* Running row pulse */
+    @keyframes row-running-pulse {
+      0%, 100% { background: transparent; }
+      50% { background: rgba(127,168,245,0.04); }
+    }
+    .state-running-pulse { animation: row-running-pulse 2s ease-in-out infinite; }
+
+    /* History table */
+    .history-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; border-radius: var(--r); overflow: hidden; }
+    .history-table th { color: var(--text-3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; text-align: left; padding: 8px 14px; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+    .history-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-2); vertical-align: middle; }
+    .history-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+    .history-table tr:last-child td { border-bottom: none; }
+    .run-status { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; font-family: var(--font-mono); }
+    .run-ok    { background: rgba(52,211,153,0.12); color: #34d399; }
+    .run-error { background: rgba(248,113,113,0.12); color: #f87171; }
+    .run-warn  { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+    .run-view-btn { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: 11px; padding: 4px 10px; border-radius: var(--r); border: 1px solid var(--border-2); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.1s; text-decoration: none; }
+    .run-view-btn:hover { border-color: var(--accent); background: rgba(127,168,245,0.08); }
+    /* Cron output page */
+    .cron-output-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .cron-output-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); text-decoration: none; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--r); transition: all 0.1s; }
+    .cron-output-back:hover { border-color: var(--accent); color: var(--accent); }
+    .cron-output-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+    .cron-output-body { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 28px 32px; max-width: 900px; }
+    .cron-output-body h1,.cron-output-body h2,.cron-output-body h3 { color: var(--text); margin: 1.2em 0 0.5em; }
+    .cron-output-body h1 { font-size: 1.3em; } .cron-output-body h2 { font-size: 1.15em; } .cron-output-body h3 { font-size: 1em; }
+    .cron-output-body p { color: var(--text-2); margin: 0.6em 0; line-height: 1.65; }
+    .cron-output-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-size: 12px; margin: 1em 0; }
+    .cron-output-body code { font-family: var(--font-mono); font-size: 0.9em; background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 3px; }
+    .cron-output-body pre code { background: none; padding: 0; }
+    .cron-output-body ul,.cron-output-body ol { color: var(--text-2); padding-left: 1.5em; line-height: 1.7; }
+    .cron-output-body a { color: var(--accent); }
+    .cron-output-body hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
+    .cron-output-body blockquote { border-left: 3px solid var(--border-2); padding-left: 14px; color: var(--text-3); margin: 1em 0; }
+    .code-collapse { margin: 1em 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .code-collapse > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 7px 14px; cursor: pointer; font-family: var(--font-mono); font-size: 11px; color: var(--text-3); background: rgba(255,255,255,0.02); user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .code-collapse > summary::before { content: '▶'; font-size: 8px; flex-shrink: 0; transition: transform 0.15s; }
+    .code-collapse[open] > summary::before { transform: rotate(90deg); }
+    .code-collapse > summary:hover { color: var(--text-2); background: rgba(255,255,255,0.04); }
+    .code-collapse > pre { margin: 0 !important; border: none !important; border-top: 1px solid var(--border) !important; border-radius: 0 !important; }
     .output-item {
       display: flex; align-items: center; justify-content: space-between;
       padding: 7px 20px; border-bottom: 1px solid var(--border);
@@ -463,10 +538,138 @@
     .modal-body table th, .modal-body table td { border: 1px solid var(--border); padding: 5px 10px; font-size: 12px; }
     .modal-body table th { background: var(--bg); color: var(--text); }
 
+    /* ── Session Detail ── */
+    .sd-meta-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 20px; margin-bottom: 20px;
+    }
+    .sd-meta-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    }
+    .sd-meta-item {}
+    .sd-meta-label {
+      font-size: 10px; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px;
+    }
+    .sd-meta-value { font-size: 13px; color: var(--text); }
+
+    .sd-token-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      gap: 0; padding: 0;
+    }
+    .sd-token-item {
+      padding: 16px 20px; border-right: 1px solid var(--border);
+      text-align: center;
+    }
+    .sd-token-item:last-child { border-right: none; }
+    .sd-token-value {
+      font-family: var(--font-mono); font-size: 20px; font-weight: 400;
+      color: var(--text); letter-spacing: -0.03em; margin-bottom: 5px;
+    }
+    .sd-token-label {
+      font-size: 10px; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    .sd-messages { padding: 0; }
+    .sd-message {
+      padding: 14px 20px 16px; border-bottom: 1px solid var(--border);
+      border-left: 2px solid transparent;
+    }
+    .sd-message:last-child { border-bottom: none; }
+    .sd-msg-user    { border-left-color: var(--accent); }
+    .sd-msg-assistant { border-left-color: var(--green); }
+    .sd-msg-tool-call { border-left-color: var(--amber); background: rgba(251,191,36,0.03); }
+    .sd-msg-tool-result { border-left-color: var(--text-3); background: rgba(255,255,255,0.01); }
+
+    .sd-msg-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .sd-msg-role-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.07em; padding: 2px 8px; border-radius: 10px;
+      border: 1px solid var(--border); color: var(--text-3);
+    }
+    .sd-role-user    { color: var(--accent); border-color: rgba(127,168,245,0.3); background: rgba(127,168,245,0.06); }
+    .sd-role-assistant { color: var(--green); border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.06); }
+    .sd-role-tool-call { color: var(--amber); border-color: rgba(251,191,36,0.3); background: rgba(251,191,36,0.06); }
+    .sd-role-tool-result { color: var(--text-3); border-color: var(--border); }
+    .sd-tool-icon { font-size: 11px; opacity: 0.7; }
+    .sd-msg-ts {
+      font-family: var(--font-mono); font-size: 10px; color: var(--text-3);
+      white-space: nowrap; margin-left: auto;
+    }
+
+    .sd-msg-body {
+      font-size: 13px; color: var(--text-2); line-height: 1.65;
+      word-break: break-word;
+    }
+    .sd-msg-body p { margin: 0 0 0.6em; }
+    .sd-msg-body p:last-child { margin-bottom: 0; }
+    .sd-msg-body h1,.sd-msg-body h2,.sd-msg-body h3 { color: var(--text); font-size: 14px; margin: 0.8em 0 0.3em; }
+    .sd-msg-body ul,.sd-msg-body ol { padding-left: 1.4em; margin: 0.3em 0 0.6em; }
+    .sd-msg-body li { margin: 0.15em 0; }
+    .sd-msg-body code { font-family: var(--font-mono); font-size: 11px; background: var(--bg); padding: 1px 5px; border-radius: 3px; color: var(--accent); }
+    .sd-msg-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 12px; margin: 0.5em 0; overflow-x: auto; }
+    .sd-msg-body pre code { background: none; padding: 0; color: var(--text); font-size: 12px; }
+    .sd-msg-body a { color: var(--accent); }
+    .sd-msg-body strong { color: var(--text); }
+    .sd-msg-body blockquote { border-left: 2px solid var(--border); padding-left: 1em; margin: 0.4em 0; color: var(--text-3); }
+
+    .sd-tool-args, .sd-tool-result-details {
+      margin-top: 6px;
+    }
+    .sd-tool-args summary, .sd-tool-result-details summary {
+      font-size: 10px; color: var(--text-3); cursor: pointer;
+      text-transform: uppercase; letter-spacing: 0.06em; user-select: none;
+      list-style: none; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .sd-tool-args summary::before { content: '▶'; font-size: 8px; }
+    .sd-tool-args[open] summary::before { content: '▼'; }
+    .sd-tool-result-details summary::before { content: '▶'; font-size: 8px; }
+    .sd-tool-result-details[open] summary::before { content: '▼'; }
+    .sd-tool-pre {
+      margin-top: 8px; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 4px; padding: 12px; font-family: var(--font-mono);
+      font-size: 11px; color: var(--text-2); line-height: 1.55;
+      overflow-x: auto; white-space: pre; max-height: 300px; overflow-y: auto;
+    }
+    .sd-empty {
+      padding: 32px 20px; text-align: center; color: var(--text-3); font-size: 13px;
+    }
+
+    /* ── Config viewer ── */
+    .config-raw {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+      padding: 16px; font-family: var(--font-mono); font-size: 12px;
+      color: var(--text); line-height: 1.7; overflow-x: auto; white-space: pre;
+    }
+
+    /* ── KPI row 8-card ── */
+    .kpi-row-8 {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 10px; margin-bottom: 20px;
+    }
+
+    /* ── Charts empty state ── */
+    .chart-empty {
+      padding: 40px 20px; text-align: center; color: var(--text-3); font-size: 13px;
+    }
+
+    /* ── Duration badge ── */
+    .badge-running {
+      background: var(--green-dim); color: var(--green);
+      font-size: 10px; padding: 2px 7px; border-radius: 20px;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 1024px) {
       .kpi-row { grid-template-columns: repeat(2, 1fr); }
+      .kpi-row-8 { grid-template-columns: repeat(2, 1fr); }
       .charts-grid { grid-template-columns: 1fr; }
+      .sd-meta-grid { grid-template-columns: repeat(2, 1fr); }
+      .sd-token-grid { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 768px) {
       .sidebar { width: var(--swc); }
@@ -546,6 +749,9 @@
         <a href="/profiles/{{ p.name }}/cron" class="sb-subitem {% if page_section == 'cron' %}active{% endif %}">
           <span class="sb-item-label">Cron Jobs</span>
         </a>
+        <a href="/profiles/{{ p.name }}/config" class="sb-subitem {% if page_section == 'config' %}active{% endif %}">
+          <span class="sb-item-label">Config</span>
+        </a>
         {% endif %}
         {% endfor %}
       </div>
@@ -602,7 +808,7 @@
       <!-- ══ OVERVIEW SECTION ══ -->
       {% if page_section == 'overview' %}
 
-      <div class="kpi-row" id="kpi-container">
+      <div class="kpi-row-8" id="kpi-container">
         {% include "partials/kpi.html" %}
       </div>
 
@@ -640,11 +846,13 @@
             </select>
           </div>
         </div>
-        <table>
+        <div style="overflow-x: auto;">
+        <table style="min-width: 900px;">
           <thead>
             <tr>
               <th>Session</th><th>Source</th><th>Model</th>
               <th>Msgs</th><th>Tools</th><th>In</th><th>Out</th>
+              <th>Reasoning</th><th>Duration</th><th>Reset</th>
               <th>Started</th><th>Cost</th>
             </tr>
           </thead>
@@ -652,6 +860,7 @@
             {% include "partials/sessions.html" %}
           </tbody>
         </table>
+        </div>
         <div class="pagination">
           <span class="pag-info" id="pagination-info"></span>
           <div class="pag-btns">
@@ -666,6 +875,21 @@
       <!-- ══ CRON SECTION ══ -->
       {% if page_section == 'cron' %}
       {% include "partials/cron.html" %}
+      {% endif %}
+
+      <!-- ══ SESSION DETAIL SECTION ══ -->
+      {% if page_section == 'session_detail' %}
+      {% include "partials/session_detail.html" %}
+      {% endif %}
+
+      <!-- ══ CONFIG SECTION ══ -->
+      {% if page_section == 'config' %}
+      {% include "partials/profile_config.html" %}
+      {% endif %}
+
+      <!-- ══ CRON OUTPUT SECTION ══ -->
+      {% if page_section == 'cron_output' %}
+      {% include "partials/cron_output.html" %}
       {% endif %}
 
     </div>
@@ -700,20 +924,11 @@
     })();
 
     // ── Date formatting ──
-    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     function fmtDate(raw) {
       if (!raw || raw === '—') return '—';
       const d = new Date(raw);
       if (isNaN(d)) return raw;
-      const now = new Date();
-      const hh = String(d.getHours()).padStart(2,'0');
-      const mm = String(d.getMinutes()).padStart(2,'0');
-      const t = `${hh}:${mm}`;
-      if (d.toDateString() === now.toDateString()) return `Today ${t}`;
-      const y = new Date(now); y.setDate(now.getDate()-1);
-      if (d.toDateString() === y.toDateString()) return `Yesterday ${t}`;
-      if (d.getFullYear() === now.getFullYear()) return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${t}`;
-      return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${t}`;
+      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
     }
     function formatAllDates(root) {
       (root||document).querySelectorAll('time[data-ts]').forEach(el => {

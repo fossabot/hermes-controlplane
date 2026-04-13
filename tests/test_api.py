@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from hermes_controlplane.main import app
 from hermes_controlplane.observer import ProfileSummary
+from hermes_controlplane import cron_actions
 
 
 client = TestClient(app)
@@ -42,6 +43,10 @@ async def fake_sessions(**kwargs):
             "estimated_cost_usd": 0.0,
             "cost_status": "estimated",
             "title": None,
+            "duration_seconds": None,
+            "was_auto_reset": False,
+            "auto_reset_reason": None,
+            "cache_write_tokens": 0,
         }
     ]
     return {"items": items, "total": 1, "limit": 20, "offset": 0}
@@ -53,6 +58,8 @@ async def fake_overview(**kwargs):
         "total_input_tokens": 50000, "total_output_tokens": 5000,
         "total_cache_read_tokens": 10000, "total_reasoning_tokens": 500,
         "active_sessions": 2, "distinct_models": 3, "distinct_sources": 2,
+        "total_tool_calls": 42, "avg_duration_seconds": 300.0,
+        "total_cache_write_tokens": 2000, "cache_efficiency_ratio": 0.167,
     }
 
 
@@ -78,6 +85,55 @@ async def fake_filter_options(**kwargs):
 
 async def fake_profile_names():
     return ["radar"]
+
+
+async def fake_session_detail_found(session_id, **kwargs):
+    if session_id == "sess-1":
+        return {
+            "id": "sess-1",
+            "source": "cli",
+            "model": "gpt-5.4",
+            "started_at": "2026-04-12T12:00:00+00:00",
+            "ended_at": "2026-04-12T12:30:00+00:00",
+            "message_count": 4,
+            "tool_call_count": 2,
+            "input_tokens": 1000,
+            "output_tokens": 500,
+            "cache_read_tokens": 200,
+            "reasoning_tokens": 50,
+            "estimated_cost_usd": 0.05,
+            "cost_status": "estimated",
+            "title": "Test session",
+            "cache_write_tokens": 80,
+            "was_auto_reset": False,
+            "auto_reset_reason": None,
+            "duration_seconds": 1800,
+        }
+    return None
+
+
+async def fake_session_detail_none(session_id, **kwargs):
+    return None
+
+
+async def fake_session_messages(session_id, **kwargs):
+    return [
+        {"id": "msg-1", "role": "user", "content": "Hello", "created_at": "2026-04-12T12:00:01+00:00"},
+        {"id": "msg-2", "role": "assistant", "content": "Hi there", "created_at": "2026-04-12T12:00:02+00:00"},
+    ]
+
+
+async def fake_profile_config_exists(name):
+    return {
+        "model": "claude-3-5-sonnet",
+        "provider": "anthropic",
+        "raw_yaml": "model:\n  default: claude-3-5-sonnet\n  provider: anthropic\n",
+        "exists": True,
+    }
+
+
+async def fake_profile_config_missing(name):
+    return {"model": None, "provider": None, "raw_yaml": "", "exists": False}
 
 
 def _patch_overview(monkeypatch):
@@ -164,3 +220,328 @@ def test_page_cron_renders(monkeypatch):
     response = client.get("/cron")
     assert response.status_code == 200
     assert "Cron" in response.text
+
+
+# ---------------------------------------------------------------------------
+# 4.6 — GET /sessions/{id}
+# ---------------------------------------------------------------------------
+
+def test_session_detail_200_for_valid_session(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_detail", fake_session_detail_found)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_messages", fake_session_messages)
+    response = client.get("/sessions/sess-1")
+    assert response.status_code == 200
+    assert "sess-1" in response.text
+    assert "Test session" in response.text
+
+
+def test_session_detail_404_for_unknown(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_detail", fake_session_detail_none)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_messages", fake_session_messages)
+    response = client.get("/sessions/no-such-session")
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 4.7 — GET /profiles/{name}/sessions/{id}
+# ---------------------------------------------------------------------------
+
+def test_profile_session_detail_200_for_valid_pair(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_profile_summary", fake_profile)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_detail", fake_session_detail_found)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_messages", fake_session_messages)
+    response = client.get("/profiles/radar/sessions/sess-1")
+    assert response.status_code == 200
+    assert "sess-1" in response.text
+
+
+def test_profile_session_detail_404_for_unknown_session(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_profile_summary", fake_profile)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_detail", fake_session_detail_none)
+    monkeypatch.setattr("hermes_controlplane.main.get_session_messages", fake_session_messages)
+    response = client.get("/profiles/radar/sessions/no-such")
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 4.8 — GET /profiles/{name}/config
+# ---------------------------------------------------------------------------
+
+def test_profile_config_200_with_raw_yaml(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_profile_summary", fake_profile)
+    monkeypatch.setattr("hermes_controlplane.main.get_profile_config_raw", fake_profile_config_exists)
+    response = client.get("/profiles/radar/config")
+    assert response.status_code == 200
+    assert "claude-3-5-sonnet" in response.text
+
+
+def test_profile_config_404_when_missing(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_all_profiles", fake_profiles)
+    monkeypatch.setattr("hermes_controlplane.main.get_profile_summary", fake_profile)
+    monkeypatch.setattr("hermes_controlplane.main.get_profile_config_raw", fake_profile_config_missing)
+    response = client.get("/profiles/radar/config")
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 4.9 — KPI partial includes new fields
+# ---------------------------------------------------------------------------
+
+def test_kpi_partial_includes_tool_calls(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_overview_stats", fake_overview)
+    response = client.get("/partials/kpi")
+    assert response.status_code == 200
+    # overview has total_tool_calls=42 — should appear in KPI card
+    assert "42" in response.text
+
+
+def test_kpi_partial_includes_cache_efficiency(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_overview_stats", fake_overview)
+    response = client.get("/partials/kpi")
+    assert response.status_code == 200
+    # cache_efficiency_ratio = 0.167 → ~16.7% — "16" should appear
+    assert "16" in response.text
+
+
+# ---------------------------------------------------------------------------
+# 4.10 — Sessions partial: Running badge, platform badge, cost prefix
+# ---------------------------------------------------------------------------
+
+async def fake_sessions_running(**kwargs):
+    items = [
+        {
+            "id": "sess-run",
+            "source": "telegram",
+            "model": "gpt-5.4",
+            "started_at": "2026-04-12T12:00:00+00:00",
+            "ended_at": None,
+            "message_count": 2,
+            "tool_call_count": 0,
+            "input_tokens": 100,
+            "output_tokens": 50,
+            "cache_read_tokens": 0,
+            "reasoning_tokens": 0,
+            "estimated_cost_usd": 0.0,
+            "cost_status": None,
+            "title": None,
+            "duration_seconds": None,
+            "was_auto_reset": False,
+            "auto_reset_reason": None,
+            "cache_write_tokens": 0,
+        }
+    ]
+    return {"items": items, "total": 1, "limit": 20, "offset": 0}
+
+
+async def fake_sessions_with_costs(**kwargs):
+    items = [
+        {
+            "id": "sess-incl",
+            "source": "cli",
+            "model": "gpt-5.4",
+            "started_at": "2026-04-12T12:00:00+00:00",
+            "ended_at": "2026-04-12T12:30:00+00:00",
+            "message_count": 3,
+            "tool_call_count": 1,
+            "input_tokens": 500,
+            "output_tokens": 200,
+            "cache_read_tokens": 50,
+            "reasoning_tokens": 0,
+            "estimated_cost_usd": 0.05,
+            "cost_status": "included",
+            "title": None,
+            "duration_seconds": 1800,
+            "was_auto_reset": False,
+            "auto_reset_reason": None,
+            "cache_write_tokens": 0,
+        },
+        {
+            "id": "sess-approx",
+            "source": "webhook",
+            "model": "gpt-5.4",
+            "started_at": "2026-04-12T11:00:00+00:00",
+            "ended_at": "2026-04-12T11:10:00+00:00",
+            "message_count": 2,
+            "tool_call_count": 0,
+            "input_tokens": 300,
+            "output_tokens": 100,
+            "cache_read_tokens": 30,
+            "reasoning_tokens": 0,
+            "estimated_cost_usd": 0.03,
+            "cost_status": "estimated",
+            "title": None,
+            "duration_seconds": 600,
+            "was_auto_reset": True,
+            "auto_reset_reason": "idle",
+            "cache_write_tokens": 0,
+        },
+    ]
+    return {"items": items, "total": 2, "limit": 20, "offset": 0}
+
+
+def test_sessions_partial_running_badge(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions_running)
+    response = client.get("/partials/sessions")
+    assert response.status_code == 200
+    assert "Running" in response.text
+
+
+def test_sessions_partial_platform_badge_present(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions_running)
+    response = client.get("/partials/sessions")
+    assert response.status_code == 200
+    # telegram badge should appear
+    assert "telegram" in response.text
+
+
+def test_sessions_partial_cost_included_prefix(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions_with_costs)
+    response = client.get("/partials/sessions")
+    assert response.status_code == 200
+    assert "incl." in response.text
+
+
+def test_sessions_partial_cost_estimated_prefix(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions_with_costs)
+    response = client.get("/partials/sessions")
+    assert response.status_code == 200
+    assert "~$" in response.text
+
+
+def test_sessions_partial_auto_reset_badge(monkeypatch):
+    monkeypatch.setattr("hermes_controlplane.main.get_recent_sessions", fake_sessions_with_costs)
+    response = client.get("/partials/sessions")
+    assert response.status_code == 200
+    assert "idle" in response.text
+
+
+# ===========================================================================
+# Cron partial and action routes
+# ===========================================================================
+
+# Fake cron job data helpers
+
+def _fake_job(job_id: str = "job-1", state: str = "scheduled") -> dict:
+    return {
+        "id": job_id,
+        "name": "Test Job",
+        "schedule_display": "every 1h",
+        "state": state,
+        "enabled": True,
+        "deliver": None,
+        "model": None,
+        "provider": None,
+        "script": None,
+        "repeat_times": None,
+        "repeat_completed": 0,
+        "next_run_at": None,
+        "last_run_at": None,
+        "last_status": None,
+        "last_error": None,
+        "created_at": None,
+        "output_count": 0,
+        "prompt_preview": "Do something",
+        "run_history": [],
+        "last_delivery_error": None,
+        "paused_reason": None,
+    }
+
+
+async def fake_run_job_ok(job_id, hermes_home=None):
+    return {"success": True, "output": "ok", "error": None}
+
+
+async def fake_pause_job_ok(job_id, hermes_home=None):
+    return {"success": True, "output": "ok", "error": None}
+
+
+async def fake_resume_job_ok(job_id, hermes_home=None):
+    return {"success": True, "output": "ok", "error": None}
+
+
+def _patch_cron_jobs(monkeypatch, jobs):
+    monkeypatch.setattr("hermes_controlplane.main.get_cron_jobs", lambda **kw: jobs)
+    monkeypatch.setattr("hermes_controlplane.main.get_all_cron_output_jobs", lambda **kw: [])
+
+
+# ---------------------------------------------------------------------------
+# 5.9 — GET /partials/cron returns HTML with cron table content
+# ---------------------------------------------------------------------------
+
+def test_partial_cron_get_returns_html(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "scheduled")])
+    response = client.get("/partials/cron")
+    assert response.status_code == 200
+    assert "job-1" in response.text
+    assert "Test Job" in response.text
+    assert "cron-section" in response.text
+
+
+def test_partial_cron_get_no_jobs_renders_empty(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [])
+    response = client.get("/partials/cron")
+    assert response.status_code == 200
+    assert "cron-section" in response.text
+
+
+# ---------------------------------------------------------------------------
+# 5.5 — POST .../run happy path → 200 HTML containing job id
+# ---------------------------------------------------------------------------
+
+def test_partial_cron_run_happy_path(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "scheduled")])
+    monkeypatch.setattr(cron_actions, "run_job", fake_run_job_ok)
+    response = client.post("/partials/cron/jobs/job-1/run")
+    assert response.status_code == 200
+    assert "cron-section" in response.text
+
+
+# ---------------------------------------------------------------------------
+# 5.6 — POST .../run with state=running → 409
+# ---------------------------------------------------------------------------
+
+def test_partial_cron_run_already_running_returns_409(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "running")])
+    response = client.post("/partials/cron/jobs/job-1/run")
+    assert response.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# 5.7 — POST .../pause happy path and already-paused → 409
+# ---------------------------------------------------------------------------
+
+def test_partial_cron_pause_happy_path(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "scheduled")])
+    monkeypatch.setattr(cron_actions, "pause_job", fake_pause_job_ok)
+    response = client.post("/partials/cron/jobs/job-1/pause")
+    assert response.status_code == 200
+    assert "cron-section" in response.text
+
+
+def test_partial_cron_pause_already_paused_returns_409(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "paused")])
+    response = client.post("/partials/cron/jobs/job-1/pause")
+    assert response.status_code == 409
+
+
+# ---------------------------------------------------------------------------
+# 5.8 — POST .../resume happy path
+# ---------------------------------------------------------------------------
+
+def test_partial_cron_resume_happy_path(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "paused")])
+    monkeypatch.setattr(cron_actions, "resume_job", fake_resume_job_ok)
+    response = client.post("/partials/cron/jobs/job-1/resume")
+    assert response.status_code == 200
+    assert "cron-section" in response.text
+
+
+def test_partial_cron_resume_not_paused_returns_409(monkeypatch):
+    _patch_cron_jobs(monkeypatch, [_fake_job("job-1", "scheduled")])
+    response = client.post("/partials/cron/jobs/job-1/resume")
+    assert response.status_code == 409

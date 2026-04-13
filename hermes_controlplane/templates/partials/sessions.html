@@ -1,5 +1,5 @@
 {% for s in sessions["items"] %}
-<tr>
+<tr class="session-row" onclick="window.location.href='{% if profile_name %}/profiles/{{ profile_name }}/sessions/{{ s.id }}{% else %}/sessions/{{ s.id }}{% endif %}'" style="cursor:pointer;">
   <td class="mono">
     {% if s.title %}
       <span class="session-title" title="{{ s.id }}">{{ s.title[:35] }}</span>
@@ -13,10 +13,40 @@
   <td class="dim">{{ s.tool_call_count }}</td>
   <td class="mono dim">{{ "{:,}".format(s.input_tokens) }}</td>
   <td class="mono dim">{{ "{:,}".format(s.output_tokens) }}</td>
-  <td class="mono">{% if s.started_at %}<time data-ts="{{ s.started_at }}">{{ s.started_at[:19] }}</time>{% else %}—{% endif %}</td>
+  <td class="mono dim">
+    {% if s.reasoning_tokens %}{{ "{:,}".format(s.reasoning_tokens) }}{% else %}—{% endif %}
+  </td>
+  <td class="mono dim">
+    {% if s.duration_seconds is not none %}
+      {% set d = s.duration_seconds %}
+      {% set h = (d // 3600) %}
+      {% set m = ((d % 3600) // 60) %}
+      {% set sec = (d % 60) %}
+      {% if h > 0 %}{{ h }}h {{ m }}m
+      {% elif m > 0 %}{{ m }}m {{ sec }}s
+      {% else %}{{ sec }}s{% endif %}
+    {% else %}
+      {% if s.is_stale %}<span class="badge badge-stale" style="font-size:10px;">stale</span>
+      {% else %}<span class="badge badge-active" style="font-size:10px;"><span class="pulse"></span>Running</span>{% endif %}
+    {% endif %}
+  </td>
+  <td class="mono dim">
+    {% if s.was_auto_reset %}
+      <span class="badge badge-unknown" style="font-size:10px;">
+        auto-reset{% if s.auto_reset_reason %}: {{ s.auto_reset_reason }}{% endif %}
+      </span>
+    {% else %}
+      —
+    {% endif %}
+  </td>
+  <td>{{ s.started_at[:19] if s.started_at else '—' }}</td>
   <td class="cost">
     {% if s.cost_status == 'included' %}
       <span class="cost-included" title="Included in subscription">incl.</span>
+    {% elif s.cost_status == 'estimated' %}
+      ~${{ '%.4f' % s.estimated_cost_usd }}
+    {% elif s.cost_status == 'unknown' %}
+      <span class="dim">n/a</span>
     {% else %}
       ${{ '%.4f' % s.estimated_cost_usd }}
     {% endif %}

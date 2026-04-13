@@ -1,0 +1,43 @@
+{% set back_url = ('/profiles/' + profile_name + '/cron') if profile_name else '/cron' %}
+
+<div class="cron-output-header">
+  <a href="{{ back_url }}" class="cron-output-back">← Cron Jobs</a>
+  <div>
+    <div style="font-size:13px;color:var(--text);font-weight:500;">{{ cron_output_filename }}</div>
+    <div class="cron-output-meta">job {{ cron_output_job_id }}</div>
+  </div>
+</div>
+
+<template id="cron-md-src">{{ cron_output_content | e }}</template>
+<div class="cron-output-body" id="cron-output-body"></div>
+
+<script>
+(function() {
+  var src = document.getElementById('cron-md-src');
+  var el = document.getElementById('cron-output-body');
+  if (!src || !el || typeof marked === 'undefined') return;
+
+  el.innerHTML = marked.parse(src.content.textContent);
+  el.querySelectorAll('a').forEach(function(a) { a.target = '_blank'; a.rel = 'noopener'; });
+
+  // Wrap each <pre> in a collapsible <details>
+  el.querySelectorAll('pre').forEach(function(pre) {
+    var code = pre.querySelector('code');
+    var lang = '';
+    if (code && code.className) {
+      var m = code.className.match(/language-(\w+)/);
+      if (m) lang = m[1];
+    }
+    var lines = (code || pre).textContent.trim().split('\n').length;
+    var label = (lang || 'code') + ' · ' + lines + ' line' + (lines === 1 ? '' : 's');
+
+    var details = document.createElement('details');
+    details.className = 'code-collapse';
+    var summary = document.createElement('summary');
+    summary.textContent = label;
+    details.appendChild(summary);
+    pre.parentNode.insertBefore(details, pre);
+    details.appendChild(pre);
+  });
+})();
+</script>

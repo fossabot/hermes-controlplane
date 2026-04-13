@@ -1,0 +1,231 @@
+<!-- Session metadata header -->
+<div class="sd-meta-card">
+  <div class="sd-meta-grid">
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">ID</div>
+      <div class="sd-meta-value mono">{{ session.id }}</div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Title</div>
+      <div class="sd-meta-value">{{ session.title or "—" }}</div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Source</div>
+      <div class="sd-meta-value">
+        <span class="source-badge source-{{ session.source }}">{{ session.source }}</span>
+      </div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Model</div>
+      <div class="sd-meta-value model-name">{{ session.model or "—" }}</div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Started</div>
+      <div class="sd-meta-value mono">
+        {% if session.started_at %}
+          <time data-ts="{{ session.started_at }}">{{ session.started_at[:19] }}</time>
+        {% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Duration</div>
+      <div class="sd-meta-value mono">
+        {% if session.duration_seconds is not none %}
+          {% set d = session.duration_seconds %}
+          {% set h = (d // 3600) %}
+          {% set m = ((d % 3600) // 60) %}
+          {% set s = (d % 60) %}
+          {% if h > 0 %}{{ h }}h {{ m }}m {{ s }}s
+          {% elif m > 0 %}{{ m }}m {{ s }}s
+          {% else %}{{ s }}s{% endif %}
+        {% elif session.is_stale %}
+          <span class="badge badge-stale">stale</span>
+        {% else %}
+          <span class="badge badge-active"><span class="pulse"></span>Running</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Cost</div>
+      <div class="sd-meta-value cost">
+        {% if session.cost_status == 'included' %}
+          <span class="cost-included">incl.</span>
+        {% elif session.cost_status == 'estimated' %}
+          ~${{ '%.4f' % session.estimated_cost_usd }}
+        {% elif session.cost_status == 'unknown' %}
+          <span class="dim">n/a</span>
+        {% else %}
+          ${{ '%.4f' % session.estimated_cost_usd }}
+        {% endif %}
+      </div>
+    </div>
+    <div class="sd-meta-item">
+      <div class="sd-meta-label">Auto Reset</div>
+      <div class="sd-meta-value">
+        {% if session.was_auto_reset %}
+          <span class="badge badge-unknown">Auto-reset{% if session.auto_reset_reason %}: {{ session.auto_reset_reason }}{% endif %}</span>
+        {% else %}
+          <span class="dim">—</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Token breakdown grid -->
+<div class="card" style="margin-bottom: 20px;">
+  <div class="card-header">
+    <span class="card-title">Token Breakdown</span>
+  </div>
+  <div class="sd-token-grid">
+    <div class="sd-token-item">
+      <div class="sd-token-value">{{ "{:,}".format(session.input_tokens) }}</div>
+      <div class="sd-token-label">Input</div>
+    </div>
+    <div class="sd-token-item">
+      <div class="sd-token-value">{{ "{:,}".format(session.output_tokens) }}</div>
+      <div class="sd-token-label">Output</div>
+    </div>
+    <div class="sd-token-item">
+      <div class="sd-token-value">{{ "{:,}".format(session.reasoning_tokens) }}</div>
+      <div class="sd-token-label">Reasoning</div>
+    </div>
+    <div class="sd-token-item">
+      <div class="sd-token-value">{{ "{:,}".format(session.cache_write_tokens) }}</div>
+      <div class="sd-token-label">Cache Write</div>
+    </div>
+    <div class="sd-token-item">
+      <div class="sd-token-value">{{ "{:,}".format(session.cache_read_tokens) }}</div>
+      <div class="sd-token-label">Cache Read</div>
+    </div>
+    <div class="sd-token-item">
+      <div class="sd-token-value">{{ "{:,}".format(session.tool_call_count) }}</div>
+      <div class="sd-token-label">Tool Calls</div>
+    </div>
+  </div>
+</div>
+
+<!-- Message timeline -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Messages</span>
+    <span class="card-count">{{ messages | length }}</span>
+  </div>
+  {% if messages %}
+  <div class="sd-messages">
+    {% for msg in messages %}
+
+      {# ── USER message ── #}
+      {% if msg.role == 'user' %}
+      <div class="sd-message sd-msg-user">
+        <div class="sd-msg-header">
+          <span class="sd-msg-role-chip sd-role-user">user</span>
+          {% if msg.created_at %}<span class="sd-msg-ts"><time data-ts="{{ msg.created_at }}">{{ msg.created_at[11:19] }}</time></span>{% endif %}
+        </div>
+        <div class="sd-msg-body sd-msg-markdown" data-raw="{{ msg.content | e }}"></div>
+      </div>
+
+      {# ── ASSISTANT with tool calls (empty content) ── #}
+      {% elif msg.role == 'assistant' and msg.finish_reason == 'tool_calls' and msg.tool_calls %}
+      <div class="sd-message sd-msg-tool-call">
+        <div class="sd-msg-header">
+          <span class="sd-msg-role-chip sd-role-tool-call">
+            <span class="sd-tool-icon">⚙</span>
+            <span class="sd-tool-fn-name" data-tool-calls="{{ msg.tool_calls | e }}">loading…</span>
+          </span>
+          {% if msg.created_at %}<span class="sd-msg-ts"><time data-ts="{{ msg.created_at }}">{{ msg.created_at[11:19] }}</time></span>{% endif %}
+        </div>
+        <details class="sd-tool-args">
+          <summary>args</summary>
+          <pre class="sd-tool-pre" data-tool-calls="{{ msg.tool_calls | e }}">{{ msg.tool_calls }}</pre>
+        </details>
+      </div>
+
+      {# ── ASSISTANT final response ── #}
+      {% elif msg.role == 'assistant' and msg.content %}
+      <div class="sd-message sd-msg-assistant">
+        <div class="sd-msg-header">
+          <span class="sd-msg-role-chip sd-role-assistant">assistant</span>
+          {% if msg.created_at %}<span class="sd-msg-ts"><time data-ts="{{ msg.created_at }}">{{ msg.created_at[11:19] }}</time></span>{% endif %}
+        </div>
+        <div class="sd-msg-body sd-msg-markdown" data-raw="{{ msg.content | e }}"></div>
+      </div>
+
+      {# ── TOOL result ── #}
+      {% elif msg.role == 'tool' %}
+      <div class="sd-message sd-msg-tool-result">
+        <div class="sd-msg-header">
+          <span class="sd-msg-role-chip sd-role-tool-result">
+            <span class="sd-tool-icon">↩</span>
+            {{ msg.tool_name or 'tool' }}
+          </span>
+          {% if msg.created_at %}<span class="sd-msg-ts"><time data-ts="{{ msg.created_at }}">{{ msg.created_at[11:19] }}</time></span>{% endif %}
+        </div>
+        <details class="sd-tool-result-details">
+          <summary>result</summary>
+          <pre class="sd-tool-pre sd-tool-result-pre" data-content="{{ msg.content | e }}">{{ msg.content }}</pre>
+        </details>
+      </div>
+
+      {# ── fallback for any other role ── #}
+      {% elif msg.content %}
+      <div class="sd-message sd-msg-other">
+        <div class="sd-msg-header">
+          <span class="sd-msg-role-chip">{{ msg.role }}</span>
+          {% if msg.created_at %}<span class="sd-msg-ts"><time data-ts="{{ msg.created_at }}">{{ msg.created_at[11:19] }}</time></span>{% endif %}
+        </div>
+        <div class="sd-msg-body">{{ msg.content }}</div>
+      </div>
+      {% endif %}
+
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="sd-empty">No messages in this session.</div>
+  {% endif %}
+</div>
+
+<script>
+(function() {
+  // Render markdown in user/assistant messages
+  if (typeof marked !== 'undefined') {
+    document.querySelectorAll('.sd-msg-markdown').forEach(function(el) {
+      var raw = el.getAttribute('data-raw');
+      if (raw) {
+        el.innerHTML = marked.parse(raw);
+        el.querySelectorAll('a').forEach(function(a) { a.target = '_blank'; a.rel = 'noopener'; });
+      }
+    });
+  }
+
+  // Parse tool_calls JSON and show function name + pretty args
+  document.querySelectorAll('.sd-tool-fn-name').forEach(function(chip) {
+    try {
+      var calls = JSON.parse(chip.getAttribute('data-tool-calls'));
+      if (calls && calls[0] && calls[0].function) {
+        chip.textContent = calls[0].function.name;
+      }
+    } catch(e) { chip.textContent = 'tool'; }
+  });
+
+  document.querySelectorAll('.sd-tool-pre[data-tool-calls]').forEach(function(pre) {
+    try {
+      var calls = JSON.parse(pre.getAttribute('data-tool-calls'));
+      if (calls && calls[0] && calls[0].function) {
+        var args = calls[0].function.arguments;
+        try { args = JSON.stringify(JSON.parse(args), null, 2); } catch(e) {}
+        pre.textContent = args;
+      }
+    } catch(e) {}
+  });
+
+  // Pretty-print tool result JSON
+  document.querySelectorAll('.sd-tool-result-pre').forEach(function(pre) {
+    try {
+      var raw = pre.getAttribute('data-content');
+      var parsed = JSON.parse(raw);
+      pre.textContent = JSON.stringify(parsed, null, 2);
+    } catch(e) {}
+  });
+})();
+</script>

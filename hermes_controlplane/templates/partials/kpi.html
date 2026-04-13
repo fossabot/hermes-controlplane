@@ -18,3 +18,41 @@
   <div class="kpi-label">Tokens</div>
   <div class="kpi-sub">{{ "{:,}".format((overview.total_cache_read_tokens / 1000000)|round(1)) }}M cached</div>
 </div>
+<div class="kpi-card">
+  <div class="kpi-value">{{ "{:,}".format(overview.total_reasoning_tokens) }}</div>
+  <div class="kpi-label">Reasoning Tokens</div>
+  <div class="kpi-sub">{{ "{:,}".format(overview.get("total_cache_write_tokens", 0)) }} cache write</div>
+</div>
+<div class="kpi-card">
+  <div class="kpi-value">
+    {% if overview.cache_efficiency_ratio is not none and overview.cache_efficiency_ratio is not none %}
+      {{ "%.1f"|format(overview.cache_efficiency_ratio * 100) }}%
+    {% else %}
+      N/A
+    {% endif %}
+  </div>
+  <div class="kpi-label">Cache Efficiency</div>
+  <div class="kpi-sub">cache_read / (cache_read + input)</div>
+</div>
+<div class="kpi-card">
+  <div class="kpi-value">
+    {% if overview.avg_duration_seconds is not none %}
+      {% set d = overview.avg_duration_seconds | int %}
+      {% set h = (d // 3600) %}
+      {% set m = ((d % 3600) // 60) %}
+      {% set s = (d % 60) %}
+      {% if h > 0 %}{{ h }}h {{ m }}m
+      {% elif m > 0 %}{{ m }}m {{ s }}s
+      {% else %}{{ s }}s{% endif %}
+    {% else %}
+      N/A
+    {% endif %}
+  </div>
+  <div class="kpi-label">Avg Duration</div>
+  <div class="kpi-sub">completed sessions only</div>
+</div>
+<div class="kpi-card">
+  <div class="kpi-value">{{ "{:,}".format(overview.get("total_tool_calls", 0)) }}</div>
+  <div class="kpi-label">Tool Calls</div>
+  <div class="kpi-sub">across all sessions</div>
+</div>

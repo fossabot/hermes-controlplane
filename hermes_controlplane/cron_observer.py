@@ -11,6 +11,10 @@ from typing import Any
 
 from hermes_controlplane.config import settings
 
+_RUN_HISTORY_LIMIT = 10
+# Heuristic: output files below this size (in KB) are treated as likely-error runs.
+_WARN_SIZE_KB = 50.0
+
 
 @dataclass
 class CronJob:
@@ -78,6 +82,77 @@ def _cron_dir(hermes_home: Path | None = None) -> Path:
     return (hermes_home or settings.hermes_home) / "cron"
 
 
+def _parse_filename_ts(stem: str) -> datetime | None:
+    """Parse ``YYYY-MM-DD_HH-MM-SS`` stem into a UTC datetime (naive)."""
+    try:
+        if "_" in stem:
+            date_part, time_part = stem.split("_", 1)
+            ts_str = f"{date_part}T{time_part.replace('-', ':')}"
+        else:
+            ts_str = stem
+        return datetime.fromisoformat(ts_str)
+    except (ValueError, TypeError):
+        return None
+
+
+def get_run_history(
+    job_id: str,
+    hermes_home: Path | None = None,
+    limit: int = _RUN_HISTORY_LIMIT,
+    last_status: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return up to *limit* run records for *job_id*, newest first.
+
+    Each record:
+      ``{start_ts, end_ts, duration_seconds, size_kb, status_hint, filename}``
+    """
+    output_dir = _cron_dir(hermes_home) / "output" / job_id
+    if not output_dir.is_dir():
+        return []
+
+    files = sorted(
+        [f for f in output_dir.iterdir() if f.suffix == ".md"],
+        key=lambda f: f.name,
+        reverse=True,
+    )[:limit]
+
+    results = []
+    for idx, f in enumerate(files):
+        try:
+            stat = f.stat()
+        except OSError:
+            continue
+
+        # The filename IS the run completion time (Hermes writes the file when the job
+        # finishes). st_mtime ≈ filename timestamp — we cannot derive start or duration
+        # from file metadata alone.
+        run_dt = _parse_filename_ts(f.stem)
+        run_ts = run_dt.isoformat() if run_dt else f.stem
+
+        size_kb = round(stat.st_size / 1024, 1)
+
+        # Status heuristic:
+        # - Most recent file (idx == 0) gets the authoritative last_status when available.
+        # - Older files: size < _WARN_SIZE_KB → "warn", else → "ok".
+        if idx == 0 and last_status:
+            status_hint = last_status
+        elif stat.st_size == 0:
+            status_hint = "unknown"
+        elif size_kb < _WARN_SIZE_KB:
+            status_hint = "warn"
+        else:
+            status_hint = "ok"
+
+        results.append({
+            "run_ts": run_ts,
+            "size_kb": size_kb,
+            "status_hint": status_hint,
+            "filename": f.name,
+        })
+
+    return results
+
+
 def _count_outputs(output_dir: Path, job_id: str) -> int:
     job_out = output_dir / job_id
     if not job_out.is_dir():
@@ -108,8 +183,10 @@ def get_cron_jobs(hermes_home: Path | None = None) -> list[dict[str, Any]]:
     for j in data.get("jobs", []):
         repeat = j.get("repeat") or {}
         schedule = j.get("schedule") or {}
-        results.append(CronJob(
-            id=j.get("id", ""),
+        job_id = j.get("id", "")
+        last_status = j.get("last_status")
+        job_dict = CronJob(
+            id=job_id,
             name=j.get("name", "unnamed"),
             schedule_display=j.get("schedule_display") or schedule.get("display", ""),
             state=j.get("state", "unknown"),
@@ -122,12 +199,19 @@ def get_cron_jobs(hermes_home: Path | None = None) -> list[dict[str, Any]]:
             repeat_completed=repeat.get("completed", 0),
             next_run_at=j.get("next_run_at"),
             last_run_at=j.get("last_run_at"),
-            last_status=j.get("last_status"),
+            last_status=last_status,
             last_error=j.get("last_error"),
             created_at=j.get("created_at"),
-            output_count=_count_outputs(output_dir, j.get("id", "")),
+            output_count=_count_outputs(output_dir, job_id),
             prompt_preview=_prompt_preview(j.get("prompt", "")),
-        ).to_dict())
+        ).to_dict()
+        job_dict["run_history"] = get_run_history(
+            job_id, hermes_home=hermes_home, last_status=last_status
+        )
+        # Also expose last_delivery_error if present
+        job_dict["last_delivery_error"] = j.get("last_delivery_error")
+        job_dict["paused_reason"] = j.get("paused_reason")
+        results.append(job_dict)
     return results
 
 
@@ -192,11 +276,13 @@ def get_all_cron_output_jobs(hermes_home: Path | None = None) -> list[dict[str, 
         if not outputs:
             continue
         latest = outputs[0]
+        latest_dt = _parse_filename_ts(latest.stem)
         results.append({
             "job_id": d.name,
             "output_count": len(outputs),
             "latest_output": latest.name,
-            "latest_timestamp": latest.stem.replace("_", " ", 1),
+            "latest_timestamp": latest_dt.isoformat() if latest_dt else latest.stem,
             "latest_size_bytes": latest.stat().st_size,
+            "run_history": get_run_history(d.name, hermes_home=hermes_home),
         })
     return results
