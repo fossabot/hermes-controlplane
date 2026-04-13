@@ -1,7 +1,9 @@
 [project]
 name = "hermes-controlplane"
 version = "0.1.0"
-description = "Hermes Control Plane — read-only observation sidecar"
+description = "Hermes Control Plane — Hermes observability sidecar with cron operations"
+readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
@@ -9,6 +11,12 @@ dependencies = [
     "aiosqlite>=0.20",
     "jinja2>=3.1",
     "pydantic-settings>=2.7",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [project.optional-dependencies]
