@@ -18,6 +18,31 @@ What this release does not include:
 - Docker as the official deployment path
 - landing page or marketing site
 
+## Screenshots
+
+<!-- Replace the placeholder files in docs/screenshots/ with real captures.
+     Recommended format: PNG, ~1400px wide, clean data (no sensitive info). -->
+
+### Overview
+
+![Overview dashboard](docs/screenshots/overview.png)
+*Global KPIs, session metrics, and activity charts.*
+
+### Sessions
+
+![Sessions list](docs/screenshots/sessions.png)
+*Filterable and paginated view of all agent sessions.*
+
+### Session Detail
+
+![Session detail](docs/screenshots/session-detail.png)
+*Full message history, token breakdown, and model usage for a single session.*
+
+### Cron Jobs
+
+![Cron jobs](docs/screenshots/cron.png)
+*Cron job visibility with run/pause/resume actions directly from the UI.*
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
