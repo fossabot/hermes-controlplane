@@ -26,6 +26,7 @@ What this release does not include:
 ### Overview
 
 ![Overview dashboard](docs/screenshots/overview.png)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmatiasdaloia%2Fhermes-controlplane.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmatiasdaloia%2Fhermes-controlplane?ref=badge_shield)
 *Global KPIs, session metrics, and activity charts.*
 
 ### Sessions
@@ -46,6 +47,9 @@ What this release does not include:
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fmatiasdaloia%2Fhermes-controlplane.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fmatiasdaloia%2Fhermes-controlplane?ref=badge_large)
 
 ## Security model
 
